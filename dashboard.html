@@ -1,0 +1,1207 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full bg-slate-50">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>L.O.T.U.S. SOLUTIONS - Panel de Administración Industrial</title>
+  <!-- Google Fonts: Inter & Montserrat -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Montserrat:wght@600;700;800&display=swap" rel="stylesheet">
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              navy: '#1A2B42',
+              'navy-light': '#253D5C',
+              'navy-dark': '#0F1A28',
+              'navy-muted': '#334E6F',
+              'navy-subtle': '#EAF0F6',
+              bg: '#F8F9FA'
+            },
+            status: {
+              urgent: '#EF4444',
+              'urgent-bg': '#FEF2F2',
+              'urgent-border': '#FECACA',
+              warning: '#F59E0B',
+              'warning-bg': '#FFFBEB',
+              'warning-border': '#FDE68A',
+              success: '#10B981',
+              'success-bg': '#ECFDF5',
+              'success-border': '#A7F3D0'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Montserrat', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background-color: #F8F9FA;
+      color: #1A2B42;
+    }
+    /* Estilos personalizados de scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #F1F5F9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #CBD5E1;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94A3B8;
+    }
+    .custom-transition {
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+  </style>
+</head>
+<body class="h-full flex overflow-hidden font-sans text-slate-800 antialiased selection:bg-brand-navy selection:text-white">
+
+  <!-- ============================================================== -->
+  <!-- BARRA LATERAL (SIDEBAR DE NAVEGACIÓN)                          -->
+  <!-- ============================================================== -->
+  <aside id="sidebar" class="w-64 bg-brand-navy text-white flex flex-col flex-shrink-0 z-30 transition-all duration-300">
+    
+    <!-- Header del Sidebar con Isotipo y Marca L.O.T.U.S. -->
+    <div class="p-4 border-b border-white/10 flex items-center gap-3 bg-white/5">
+      <div class="w-11 h-11 rounded-xl bg-white p-1 flex items-center justify-center shadow-md flex-shrink-0 overflow-hidden">
+        <img src="assets/WhatsApp%20Image%202026-09-30%20at%204.08.12%20PM.jpeg" alt="L.O.T.U.S. SOLUTIONS" class="w-full h-full object-contain" onerror="this.onerror=null; this.parentElement.innerHTML='<svg class=\'w-6 h-6 text-brand-navy\' viewBox=\'0 0 24 24\' fill=\'currentColor\'><path d=\'M12 2C12 2 9.5 7.5 9.5 12C9.5 14.5 10.6 16.5 12 17.5C13.4 16.5 14.5 14.5 14.5 12C14.5 7.5 12 2 12 2Z\'/></svg>'">
+      </div>
+
+      <div class="overflow-hidden">
+        <h1 class="font-display font-bold text-sm tracking-tight text-white leading-tight">
+          L.O.T.U.S. SOLUTIONS
+        </h1>
+        <p class="text-[9px] text-slate-300 uppercase tracking-wider font-medium truncate">
+          Plant Administration
+        </p>
+      </div>
+    </div>
+
+    <!-- Navegación Principal -->
+    <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+      <div class="px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+        Gestión Operativa
+      </div>
+
+      <!-- Opción 1: Dashboard General -->
+      <button onclick="switchView('dashboard')" id="nav-dashboard" class="nav-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-200 hover:text-white hover:bg-white/10 custom-transition">
+        <div class="flex items-center gap-3">
+          <svg class="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
+          </svg>
+          <span>Dashboard</span>
+        </div>
+      </button>
+
+      <!-- Opción 2: Historial de Operaciones (CORE) -->
+      <button onclick="switchView('operaciones')" id="nav-operaciones" class="nav-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium bg-white/15 text-white shadow-xs custom-transition">
+        <div class="flex items-center gap-3">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+          </svg>
+          <span>Historial de Operaciones</span>
+        </div>
+        <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-brand-navy-light text-slate-200" id="totalOpsBadge">24</span>
+      </button>
+
+      <!-- Opción 3: Alertas en Tiempo Real (CORE) -->
+      <button onclick="switchView('alertas')" id="nav-alertas" class="nav-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-200 hover:text-white hover:bg-white/10 custom-transition">
+        <div class="flex items-center gap-3">
+          <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+          </svg>
+          <span>Alertas</span>
+        </div>
+        <span id="sidebarAlertsCount" class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-red-500 text-white animate-pulse">4</span>
+      </button>
+
+      <!-- Opción 4: Inventario -->
+      <button onclick="switchView('inventario')" id="nav-inventario" class="nav-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-200 hover:text-white hover:bg-white/10 custom-transition">
+        <div class="flex items-center gap-3">
+          <svg class="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+          </svg>
+          <span>Inventario</span>
+        </div>
+      </button>
+
+      <!-- Opción 5: Personal -->
+      <button onclick="switchView('personal')" id="nav-personal" class="nav-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-200 hover:text-white hover:bg-white/10 custom-transition">
+        <div class="flex items-center gap-3">
+          <svg class="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+          </svg>
+          <span>Personal</span>
+        </div>
+      </button>
+
+      <div class="pt-4 px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+        Enlaces Externos
+      </div>
+
+      <!-- Enlace directo al Kiosk Terminal -->
+      <a href="index.html" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-200 hover:text-white hover:bg-emerald-600/30 border border-emerald-500/30 custom-transition group">
+        <div class="flex items-center gap-3">
+          <svg class="w-5 h-5 text-emerald-400 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+          </svg>
+          <span>Abrir Kiosk Terminal</span>
+        </div>
+        <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+        </svg>
+      </a>
+    </nav>
+
+    <!-- Footer del Sidebar con estado SCADA -->
+    <div class="p-4 border-t border-white/10 bg-brand-navy-dark/40 text-xs">
+      <div class="flex items-center justify-between text-slate-300 mb-1">
+        <span class="font-medium">SCADA Server #01</span>
+        <span class="inline-flex items-center gap-1.5 text-emerald-400 font-semibold text-[11px]">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Online
+        </span>
+      </div>
+      <div class="text-[11px] text-slate-400">L.O.T.U.S. Core v2.4.8</div>
+    </div>
+  </aside>
+
+  <!-- ============================================================== -->
+  <!-- ÁREA PRINCIPAL DE CONTENIDO                                    -->
+  <!-- ============================================================== -->
+  <div class="flex-1 flex flex-col min-w-0 overflow-hidden bg-brand-bg">
+    
+    <!-- BARRA SUPERIOR (TOP BAR) -->
+    <header class="h-16 bg-white border-b border-slate-200/80 px-6 flex items-center justify-between z-20 shadow-2xs flex-shrink-0">
+      
+      <!-- Buscador Global y Breadcrumb -->
+      <div class="flex items-center gap-4 flex-1 max-w-xl">
+        <!-- Input de búsqueda universal -->
+        <div class="relative w-full">
+          <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+          </span>
+          <input type="text" id="globalSearchInput" oninput="handleGlobalSearch(this.value)" placeholder="Buscar por operario, máquina, ID o sector... (Ej: Torno, Juan)" class="w-full pl-9 pr-12 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-navy/20 focus:border-brand-navy transition-all">
+          <kbd class="hidden sm:inline-block absolute right-2.5 top-2.5 px-1.5 py-0.5 text-[10px] font-mono font-semibold text-slate-400 bg-white border border-slate-200 rounded shadow-2xs">Ctrl+K</kbd>
+        </div>
+      </div>
+
+      <!-- Controles de la Derecha: Notificaciones, Filtros Rápidos, Perfil -->
+      <div class="flex items-center gap-4">
+        
+        <!-- Indicador de Turno -->
+        <div class="hidden lg:flex items-center gap-2 px-3 py-1 bg-slate-100 rounded-full text-slate-600 text-xs font-medium">
+          <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+          <span>Turno Mañana (06:00 - 14:00)</span>
+        </div>
+
+        <!-- Botón Campanita de Notificaciones -->
+        <div class="relative">
+          <button onclick="toggleNotificationDropdown()" id="notifBellBtn" class="relative p-2.5 text-slate-500 hover:text-brand-navy hover:bg-slate-100 rounded-xl transition-colors cursor-pointer" title="Ver Alertas y Notificaciones">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+            </svg>
+            <!-- Badge contador de alertas activas -->
+            <span id="bellBadge" class="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center ring-2 ring-white">4</span>
+          </button>
+
+          <!-- Dropdown Flotante de Notificaciones Rápidas -->
+          <div id="notifDropdown" class="hidden absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-xl border border-slate-200 py-3 z-50">
+            <div class="px-4 pb-2 border-b border-slate-100 flex items-center justify-between">
+              <span class="font-display font-bold text-sm text-brand-navy">Alertas en Tiempo Real</span>
+              <button onclick="switchView('alertas'); toggleNotificationDropdown();" class="text-xs text-brand-navy-light hover:underline font-semibold">Ver todas</button>
+            </div>
+            <div id="notifDropdownList" class="max-h-72 overflow-y-auto divide-y divide-slate-100">
+              <!-- Se inyecta dinámicamente con JS -->
+            </div>
+            <div class="pt-2 px-4 border-t border-slate-100 text-center">
+              <button onclick="switchView('alertas'); toggleNotificationDropdown();" class="w-full py-2 bg-slate-50 hover:bg-slate-100 rounded-xl text-xs font-semibold text-brand-navy transition-colors">
+                Ir al Centro de Alertas
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="h-6 w-px bg-slate-200"></div>
+
+        <!-- Perfil del Supervisor / Administrador -->
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-brand-navy text-white flex items-center justify-center font-display font-bold text-xs shadow-xs">
+            RR
+          </div>
+          <div class="hidden md:block text-left">
+            <div class="font-medium text-xs text-brand-navy leading-tight">Ing. Roberto Rossi</div>
+            <div class="text-[10px] text-slate-400 font-medium">Jefe de Planta & Pañol</div>
+          </div>
+        </div>
+
+      </div>
+    </header>
+
+    <!-- CONTENEDOR DE VISTAS (SPA CONTENT) -->
+    <main class="flex-1 overflow-y-auto p-6 md:p-8">
+
+      <!-- ============================================================== -->
+      <!-- VISTA 1: DASHBOARD GENERAL                                     -->
+      <!-- ============================================================== -->
+      <section id="view-dashboard" class="space-y-6 hidden">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 class="font-display font-extrabold text-2xl text-brand-navy tracking-tight">Panel de Control de Planta</h2>
+            <p class="text-xs text-slate-500">Métricas consolidadas de pañol, herramientas y máquinas en tiempo real.</p>
+          </div>
+          <button onclick="switchView('operaciones')" class="inline-flex items-center gap-2 px-4 py-2 bg-brand-navy hover:bg-brand-navy-light text-white text-xs font-semibold rounded-xl shadow-xs transition-all">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+            <span>Ver Todas las Operaciones</span>
+          </button>
+        </div>
+
+        <!-- KPI Cards Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <!-- Card 1: Operaciones Hoy -->
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Operaciones Hoy</span>
+              <div class="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+              </div>
+            </div>
+            <div class="text-3xl font-display font-extrabold text-brand-navy">38</div>
+            <div class="text-xs text-emerald-600 font-medium mt-1 flex items-center gap-1">
+              <span>↑ 12% vs. ayer</span>
+              <span class="text-slate-400">· Turno activo</span>
+            </div>
+          </div>
+
+          <!-- Card 2: Herramientas en Préstamo -->
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">En Uso / Préstamo</span>
+              <div class="w-9 h-9 rounded-xl bg-brand-navy-subtle text-brand-navy flex items-center justify-center">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                </svg>
+              </div>
+            </div>
+            <div class="text-3xl font-display font-extrabold text-brand-navy">19</div>
+            <div class="text-xs text-slate-500 font-medium mt-1">
+              <span>86% tasa de devolución a término</span>
+            </div>
+          </div>
+
+          <!-- Card 3: Alertas Pendientes -->
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Alertas Activas</span>
+              <div class="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
+              </div>
+            </div>
+            <div class="text-3xl font-display font-extrabold text-red-600" id="kpiAlertCount">4</div>
+            <div class="text-xs text-red-600 font-medium mt-1">
+              <span>2 críticas requieren aviso</span>
+            </div>
+          </div>
+
+          <!-- Card 4: Operarios Habilitados -->
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Operarios en Turno</span>
+              <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+              </div>
+            </div>
+            <div class="text-3xl font-display font-extrabold text-emerald-700">14 / 16</div>
+            <div class="text-xs text-slate-500 font-medium mt-1">
+              <span>Sector Mecanizado y Soldadura</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Banner Interactivo: Accesos Rápidos -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Tarjeta de alerta rápida -->
+          <div class="bg-gradient-to-r from-brand-navy to-brand-navy-light text-white p-6 rounded-2xl shadow-md flex items-center justify-between">
+            <div>
+              <span class="inline-block px-2.5 py-1 bg-white/20 rounded-md text-[10px] font-bold uppercase tracking-wider text-amber-300 mb-2">
+                Atención Prioritaria
+              </span>
+              <h3 class="font-display font-bold text-lg">Mantenimiento Torno Paralelo MAQ-001</h3>
+              <p class="text-xs text-slate-300 mt-1 max-w-sm">Próximo service preventivo vence en 48hs. Se aconseja notificar a la guardia técnica.</p>
+            </div>
+            <button onclick="switchView('alertas')" class="px-4 py-2.5 bg-white text-brand-navy hover:bg-slate-100 rounded-xl text-xs font-bold transition-all shadow-xs flex-shrink-0 cursor-pointer">
+              Gestionar Alerta →
+            </button>
+          </div>
+
+          <!-- Kiosk Terminal Status -->
+          <div class="bg-white border border-slate-200 p-6 rounded-2xl shadow-2xs flex items-center justify-between">
+            <div class="flex items-center gap-4">
+              <div class="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                </svg>
+              </div>
+              <div>
+                <h4 class="font-display font-bold text-base text-brand-navy">Terminal de Pañol (Kiosk NFC)</h4>
+                <p class="text-xs text-slate-500">Terminal #04 operando en tiempo real con lector NFC y pistola láser.</p>
+              </div>
+            </div>
+            <a href="index.html" target="_blank" class="px-3.5 py-2 border border-slate-300 hover:border-brand-navy text-brand-navy rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5">
+              <span>Probar Kiosk</span>
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- VISTA 2: HISTORIAL DE OPERACIONES (CORE)                       -->
+      <!-- ============================================================== -->
+      <section id="view-operaciones" class="space-y-6">
+        
+        <!-- Header de la sección con acciones -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 class="font-display font-extrabold text-2xl text-brand-navy tracking-tight">Historial de Operaciones</h2>
+            <p class="text-xs text-slate-500">Registro inmutable de retiros, devoluciones y reportes de falla del pañol industrial.</p>
+          </div>
+          
+          <div class="flex items-center gap-2.5">
+            <!-- Botón Exportar CSV -->
+            <button onclick="exportToCsv()" class="inline-flex items-center gap-2 px-3.5 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-xl shadow-2xs transition-colors cursor-pointer">
+              <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+              </svg>
+              <span>Exportar CSV</span>
+            </button>
+
+            <!-- Botón Registrar Operación Manual -->
+            <button onclick="openNewOperationModal()" class="inline-flex items-center gap-2 px-4 py-2 bg-brand-navy hover:bg-brand-navy-light text-white text-xs font-semibold rounded-xl shadow-xs transition-all cursor-pointer">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+              </svg>
+              <span>Nuevo Registro</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Barra de Filtros Avanzada -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-2xs p-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+            
+            <!-- Filtro 1: Búsqueda por Operario o Ítem -->
+            <div>
+              <label class="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Buscar</label>
+              <div class="relative">
+                <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                </span>
+                <input type="text" id="filterOperatorInput" oninput="applyFilters()" placeholder="Operario, herramienta o ID..." class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-navy/20 focus:border-brand-navy">
+              </div>
+            </div>
+
+            <!-- Filtro 2: Tipo de Acción (Dropdown) -->
+            <div>
+              <label class="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Tipo de Acción</label>
+              <select id="filterActionSelect" onchange="applyFilters()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-navy/20 focus:border-brand-navy">
+                <option value="ALL">Todas las Acciones</option>
+                <option value="Retiro">Retiro</option>
+                <option value="Devolución">Devolución</option>
+                <option value="Reporte de Falla">Reporte de Falla</option>
+              </select>
+            </div>
+
+            <!-- Filtro 3: Filtro por Rango Temporal / Fecha -->
+            <div>
+              <label class="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Período</label>
+              <select id="filterDateSelect" onchange="applyFilters()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-navy/20 focus:border-brand-navy">
+                <option value="ALL">Todo el Historial</option>
+                <option value="TODAY">Hoy (Turno en curso)</option>
+                <option value="YESTERDAY">Ayer</option>
+                <option value="WEEK">Últimos 7 días</option>
+              </select>
+            </div>
+
+            <!-- Filtro 4: Estado de Operación -->
+            <div>
+              <label class="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Estado</label>
+              <select id="filterStatusSelect" onchange="applyFilters()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-navy/20 focus:border-brand-navy">
+                <option value="ALL">Todos los Estados</option>
+                <option value="Completado">Completado</option>
+                <option value="Pendiente">Pendiente</option>
+              </select>
+            </div>
+
+          </div>
+
+          <!-- Limpiar filtros activos -->
+          <div class="flex items-center justify-between pt-3 mt-3 border-t border-slate-100 text-xs">
+            <span class="text-slate-500 font-medium" id="filterResultsCount">Mostrando 8 de 24 registros</span>
+            <button onclick="resetFilters()" class="text-brand-navy hover:underline font-semibold cursor-pointer">
+              Limpiar filtros
+            </button>
+          </div>
+        </div>
+
+        <!-- TABLA DE DATOS (DATA TABLE MODERNA) -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="bg-slate-50 border-b border-slate-200/80 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                  <th class="py-3.5 px-4">Fecha / Hora</th>
+                  <th class="py-3.5 px-4">ID Operación</th>
+                  <th class="py-3.5 px-4">Operario</th>
+                  <th class="py-3.5 px-4">Acción</th>
+                  <th class="py-3.5 px-4">Ítem / Máquina</th>
+                  <th class="py-3.5 px-4">Estado</th>
+                  <th class="py-3.5 px-4 text-right">Detalle</th>
+                </tr>
+              </thead>
+              <tbody id="operationsTableBody" class="divide-y divide-slate-100 text-xs text-slate-700">
+                <!-- Se inyecta dinámicamente vía JavaScript -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Estado Vacío cuando ningún filtro coincide -->
+          <div id="emptyTableState" class="hidden p-12 text-center">
+            <div class="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+            <h4 class="font-display font-bold text-slate-800 text-sm">No se encontraron operaciones</h4>
+            <p class="text-xs text-slate-500 mt-1">Pruebe modificando los términos de búsqueda o filtros seleccionados.</p>
+          </div>
+
+          <!-- Paginación Básica Simulada -->
+          <div class="px-6 py-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 bg-white">
+            <div class="text-xs text-slate-500" id="paginationInfo">
+              Página <span class="font-semibold text-slate-800" id="currentPageNum">1</span> de <span class="font-semibold text-slate-800" id="totalPagesNum">3</span>
+            </div>
+
+            <div class="inline-flex items-center gap-1.5">
+              <button onclick="changePage(-1)" id="prevPageBtn" class="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-medium disabled:opacity-40 disabled:pointer-events-none transition-colors cursor-pointer">
+                ← Anterior
+              </button>
+              
+              <div id="paginationPages" class="flex items-center gap-1">
+                <!-- Números de página inyectados con JS -->
+              </div>
+
+              <button onclick="changePage(1)" id="nextPageBtn" class="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-medium disabled:opacity-40 disabled:pointer-events-none transition-colors cursor-pointer">
+                Siguiente →
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- VISTA 3: ALERTAS EN TIEMPO REAL (CORE)                         -->
+      <!-- ============================================================== -->
+      <section id="view-alertas" class="space-y-6 hidden">
+        
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <div class="flex items-center gap-2.5">
+              <h2 class="font-display font-extrabold text-2xl text-brand-navy tracking-tight">Centro de Alertas de Planta</h2>
+              <span id="alertsBadgeView" class="px-2.5 py-0.5 rounded-full bg-red-100 text-red-700 text-xs font-bold">4 Activas</span>
+            </div>
+            <p class="text-xs text-slate-500 mt-1">Supervisión preventiva de máquinas, calibraciones y niveles críticos de stock con aviso multicanal.</p>
+          </div>
+
+          <!-- Filtro de tipo de alerta -->
+          <div class="flex items-center gap-2 bg-white p-1 rounded-xl border border-slate-200 text-xs font-medium">
+            <button onclick="filterAlerts('ALL')" id="filterAlert-ALL" class="px-3 py-1.5 rounded-lg bg-brand-navy text-white font-semibold transition-all">Todas</button>
+            <button onclick="filterAlerts('urgent')" id="filterAlert-urgent" class="px-3 py-1.5 rounded-lg text-slate-600 hover:text-brand-navy transition-all">Urgentes</button>
+            <button onclick="filterAlerts('warning')" id="filterAlert-warning" class="px-3 py-1.5 rounded-lg text-slate-600 hover:text-brand-navy transition-all">Preventivas</button>
+          </div>
+        </div>
+
+        <!-- Grid de Tarjetas de Alertas -->
+        <div id="alertsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <!-- Renderizado dinámico con JS -->
+        </div>
+
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- VISTA 4: INVENTARIO DE PAÑOL                                   -->
+      <!-- ============================================================== -->
+      <section id="view-inventario" class="space-y-6 hidden">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 class="font-display font-extrabold text-2xl text-brand-navy tracking-tight">Inventario de Herramientas y Máquinas</h2>
+            <p class="text-xs text-slate-500">Parque de maquinaria metalúrgica y stock de herramientas de precisión.</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5" id="inventoryCards">
+          <!-- Inyectado con JS -->
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- VISTA 5: PERSONAL Y OPERARIOS                                  -->
+      <!-- ============================================================== -->
+      <section id="view-personal" class="space-y-6 hidden">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 class="font-display font-extrabold text-2xl text-brand-navy tracking-tight">Padrón de Operarios Autorizados</h2>
+            <p class="text-xs text-slate-500">Control de habilitaciones NFC, sector fabril y herramientas en posesión.</p>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xs">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead class="bg-slate-50 border-b border-slate-200/80 uppercase text-[11px] font-bold text-slate-500">
+              <tr>
+                <th class="py-3 px-4">Operario</th>
+                <th class="py-3 px-4">Sector</th>
+                <th class="py-3 px-4">Credencial NFC</th>
+                <th class="py-3 px-4">Herramientas en Mano</th>
+                <th class="py-3 px-4">Estado</th>
+              </tr>
+            </thead>
+            <tbody id="personalTableBody" class="divide-y divide-slate-100">
+              <!-- Renderizado con JS -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- MODAL: DETALLE / NUEVO REGISTRO                                -->
+  <!-- ============================================================== -->
+  <div id="operationModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-brand-navy/50 backdrop-blur-xs opacity-0 pointer-events-none transition-opacity duration-200">
+    <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl p-6 max-w-lg w-full transform scale-95 transition-transform duration-200">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+        <h3 class="font-display font-bold text-lg text-brand-navy" id="modalTitle">Nuevo Registro de Operación</h3>
+        <button onclick="closeModal()" class="text-slate-400 hover:text-slate-700 p-1 rounded-lg">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <form id="newOperationForm" onsubmit="submitNewOperation(event)" class="space-y-4 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Operario</label>
+          <input type="text" id="formOperator" required placeholder="Ej: Juan Pérez" class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-navy/20 focus:outline-none">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Acción</label>
+            <select id="formAction" class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-navy/20 focus:outline-none">
+              <option value="Retiro">Retiro</option>
+              <option value="Devolución">Devolución</option>
+              <option value="Reporte de Falla">Reporte de Falla</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Estado</label>
+            <select id="formStatus" class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-navy/20 focus:outline-none">
+              <option value="Completado">Completado</option>
+              <option value="Pendiente">Pendiente</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Ítem o Máquina</label>
+          <input type="text" id="formItem" required placeholder="Ej: Torno Paralelo MAQ-001 o Amoladora #4" class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-navy/20 focus:outline-none">
+        </div>
+
+        <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+          <button type="button" onclick="closeModal()" class="px-4 py-2 border border-slate-300 rounded-xl text-slate-600 hover:bg-slate-50 font-medium">Cancelar</button>
+          <button type="submit" class="px-5 py-2 bg-brand-navy hover:bg-brand-navy-light text-white rounded-xl font-bold shadow-xs">Guardar Registro</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- TOAST FLOTANTE DE NOTIFICACIÓN -->
+  <div id="toast" class="fixed bottom-6 right-6 z-50 transform translate-y-24 opacity-0 transition-all duration-300 pointer-events-none">
+    <div class="flex items-center gap-3 bg-brand-navy text-white px-5 py-3.5 rounded-2xl shadow-xl border border-white/10 text-xs">
+      <div id="toastIcon" class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+      </div>
+      <div id="toastMessage" class="font-medium">Aviso enviado exitosamente</div>
+    </div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- JAVASCRIPT: LÓGICA DE CONTROL, ESTADO Y MOCK DATA              -->
+  <!-- ============================================================== -->
+  <script>
+    // ----------------------------------------------------
+    // BASE DE DATOS SIMULADA (MOCK DATA INDUSTRIAL REALISTA)
+    // ----------------------------------------------------
+    const mockOperations = [
+      { id: "OP-2026-0930-01", date: "30/09/2026 13:42", timestamp: new Date("2026-09-30T13:42:00"), operator: "Juan Pérez", action: "Retiro", item: "Amoladora Angular DeWalt 800W #4", status: "Completado", sector: "Mantenimiento" },
+      { id: "OP-2026-0930-02", date: "30/09/2026 13:15", timestamp: new Date("2026-09-30T13:15:00"), operator: "Carlos Gómez", action: "Devolución", item: "Taladro Percutor Bosch 18V #02", status: "Completado", sector: "Mecanizado" },
+      { id: "OP-2026-0930-03", date: "30/09/2026 12:50", timestamp: new Date("2026-09-30T12:50:00"), operator: "Laura Benítez", action: "Reporte de Falla", item: "Torno Paralelo MAQ-001", status: "Pendiente", sector: "Tornería" },
+      { id: "OP-2026-0930-04", date: "30/09/2026 11:30", timestamp: new Date("2026-09-30T11:30:00"), operator: "Esteban Maidana", action: "Retiro", item: "Llave Dinamométrica Torquímetro 1/2\"", status: "Completado", sector: "Montaje" },
+      { id: "OP-2026-0930-05", date: "30/09/2026 10:15", timestamp: new Date("2026-09-30T10:15:00"), operator: "Juan Pérez", action: "Devolución", item: "Multímetro Digital Fluke 117", status: "Completado", sector: "Mantenimiento" },
+      { id: "OP-2026-0930-06", date: "30/09/2026 09:40", timestamp: new Date("2026-09-30T09:40:00"), operator: "Miguel Ángel Russo", action: "Retiro", item: "Soldadora Inverter TIG Lincoln", status: "Pendiente", sector: "Soldadura" },
+      { id: "OP-2026-0930-07", date: "30/09/2026 08:22", timestamp: new Date("2026-09-30T08:22:00"), operator: "Hernán Cortés", action: "Retiro", item: "Calibre Digital Mitutoyo 150mm", status: "Completado", sector: "Control Calidad" },
+      { id: "OP-2026-0930-08", date: "30/09/2026 07:05", timestamp: new Date("2026-09-30T07:05:00"), operator: "Carlos Gómez", action: "Retiro", item: "Juego de Tubos Bocallave Stanley 94p", status: "Completado", sector: "Mecanizado" },
+      { id: "OP-2026-0929-01", date: "29/09/2026 17:10", timestamp: new Date("2026-09-29T17:10:00"), operator: "Lucía Méndez", action: "Devolución", item: "Fresadora Universal F-03", status: "Completado", sector: "Mecanizado" },
+      { id: "OP-2026-0929-02", date: "29/09/2026 15:45", timestamp: new Date("2026-09-29T15:45:00"), operator: "Pablo Aimar", action: "Reporte de Falla", item: "Compresor de Aire Industrial 500L", status: "Pendiente", sector: "Servicios Generales" },
+      { id: "OP-2026-0929-03", date: "29/09/2026 14:20", timestamp: new Date("2026-09-29T14:20:00"), operator: "Laura Benítez", action: "Retiro", item: "Micrómetro de Exteriores 25-50mm", status: "Completado", sector: "Tornería" },
+      { id: "OP-2026-0929-04", date: "29/09/2026 11:00", timestamp: new Date("2026-09-29T11:00:00"), operator: "Juan Pérez", action: "Retiro", item: "Pistola de Calor Industrial Makita", status: "Completado", sector: "Mantenimiento" },
+      { id: "OP-2026-0928-01", date: "28/09/2026 16:30", timestamp: new Date("2026-09-28T16:30:00"), operator: "Esteban Maidana", action: "Devolución", item: "Extractor de Poleas Hidráulico 10T", status: "Completado", sector: "Montaje" },
+      { id: "OP-2026-0928-02", date: "28/09/2026 10:45", timestamp: new Date("2026-09-28T10:45:00"), operator: "Miguel Ángel Russo", action: "Devolución", item: "Careta Fotosensible para Soldar Miller", status: "Completado", sector: "Soldadura" },
+      { id: "OP-2026-0927-01", date: "27/09/2026 12:15", timestamp: new Date("2026-09-27T12:15:00"), operator: "Carlos Gómez", action: "Retiro", item: "Termómetro Infrarrojo Testo", status: "Completado", sector: "Mecanizado" }
+    ];
+
+    const mockAlerts = [
+      {
+        id: "ALT-001",
+        type: "urgent",
+        icon: "⚠️",
+        title: "Mantenimiento Preventivo Inminente - Torno Paralelo MAQ-001",
+        description: "El ciclo de 500 horas de husillo principal se cumple en 2 días. Requiere cambio de aceite de bancada y verificación de alineación.",
+        deadline: "Vence en 2 días",
+        target: "Jefe de Mantenimiento",
+        phone: "+54 9 11 4829-1029",
+        notified: false
+      },
+      {
+        id: "ALT-002",
+        type: "warning",
+        icon: "📉",
+        title: "Stock Crítico - Discos de Corte 115mm (Quedan 5 unidades)",
+        description: "El stock de discos abrasivos de desbaste y corte superó el umbral mínimo de seguridad establecido en 20 unidades.",
+        deadline: "Reponer Urgente",
+        target: "Responsable de Compras",
+        phone: "+54 9 11 5930-8812",
+        notified: false
+      },
+      {
+        id: "ALT-003",
+        type: "urgent",
+        icon: "🔥",
+        title: "Sensor Térmico Excedido - Fresadora CNC Haas VF-2",
+        description: "Alarma SCADA detectó pico térmico de 78°C en bomba de refrigerante soluble. Revisar nivel de emulsión.",
+        deadline: "En curso (Hoy 12:40)",
+        target: "Guardia Técnica Mecanizado",
+        phone: "+54 9 11 3102-4455",
+        notified: false
+      },
+      {
+        id: "ALT-004",
+        type: "warning",
+        icon: "⏱️",
+        title: "Calibración Vencida - Torquímetro Digital TQ-08",
+        description: "Certificado de calibración de laboratorio INTI expiró. Debe retirarse de la línea de montaje de bridas de alta presión.",
+        deadline: "Expiró ayer",
+        target: "Control de Calidad",
+        phone: "+54 9 11 6781-9920",
+        notified: false
+      }
+    ];
+
+    const mockInventory = [
+      { name: "Torno Paralelo Pinacho MAQ-001", category: "Máquinas Pesadas", code: "MAQ-001", state: "En Alerta Mantenimiento", badge: "bg-amber-100 text-amber-800" },
+      { name: "Centro de Mecanizado Haas VF-2", category: "CNC", code: "CNC-004", state: "Operativo", badge: "bg-emerald-100 text-emerald-800" },
+      { name: "Amoladora DeWalt 800W #4", category: "Herramienta Manual", code: "HER-049", state: "En Préstamo (Juan Pérez)", badge: "bg-blue-100 text-blue-800" },
+      { name: "Soldadora TIG Lincoln Electric", category: "Soldadura", code: "SOL-012", state: "En Préstamo (M. Russo)", badge: "bg-blue-100 text-blue-800" },
+      { name: "Discos de Corte 115mm x 1.6", category: "Consumible", code: "INS-901", state: "Stock Crítico: 5 u.", badge: "bg-red-100 text-red-800" },
+      { name: "Taladro Percutor Bosch 18V", category: "Inalámbrico", code: "HER-018", state: "En Pañol Disponible", badge: "bg-emerald-100 text-emerald-800" }
+    ];
+
+    const mockStaff = [
+      { name: "Juan Pérez", sector: "Mantenimiento", nfc: "NFC-84920", tools: 1, status: "Habilitado" },
+      { name: "Carlos Gómez", sector: "Mecanizado", nfc: "NFC-10294", tools: 1, status: "Habilitado" },
+      { name: "Laura Benítez", sector: "Tornería", nfc: "NFC-77319", tools: 0, status: "Habilitado" },
+      { name: "Esteban Maidana", sector: "Montaje", nfc: "NFC-55018", tools: 1, status: "Habilitado" },
+      { name: "Miguel Ángel Russo", sector: "Soldadura", nfc: "NFC-99401", tools: 1, status: "Habilitado" },
+      { name: "Hernán Cortés", sector: "Control Calidad", nfc: "NFC-30114", tools: 0, status: "Habilitado" }
+    ];
+
+    // ----------------------------------------------------
+    // ESTADO DE LA INTERFAZ Y PAGINACIÓN
+    // ----------------------------------------------------
+    let currentPage = 1;
+    const itemsPerPage = 7;
+    let filteredOperations = [...mockOperations];
+    let currentAlertFilter = 'ALL';
+
+    // ----------------------------------------------------
+    // INICIALIZACIÓN
+    // ----------------------------------------------------
+    window.addEventListener('DOMContentLoaded', () => {
+      renderOperationsTable();
+      renderAlerts();
+      renderInventory();
+      renderStaff();
+      updateNotificationsDropdown();
+    });
+
+    // ----------------------------------------------------
+    // NAVEGACIÓN ENTRE VISTAS (SPA)
+    // ----------------------------------------------------
+    function switchView(viewName) {
+      const views = ['dashboard', 'operaciones', 'alertas', 'inventario', 'personal'];
+      views.forEach(v => {
+        const viewEl = document.getElementById(`view-${v}`);
+        const navEl = document.getElementById(`nav-${v}`);
+        
+        if (v === viewName) {
+          viewEl.classList.remove('hidden');
+          if (navEl) {
+            navEl.classList.add('bg-white/15', 'text-white', 'shadow-xs');
+            navEl.classList.remove('text-slate-200');
+          }
+        } else {
+          viewEl.classList.add('hidden');
+          if (navEl) {
+            navEl.classList.remove('bg-white/15', 'text-white', 'shadow-xs');
+            navEl.classList.add('text-slate-200');
+          }
+        }
+      });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // ----------------------------------------------------
+    // VISTA OPERACIONES: RENDER Y FILTRADO
+    // ----------------------------------------------------
+    function applyFilters() {
+      const operatorQuery = document.getElementById('filterOperatorInput').value.toLowerCase().trim();
+      const actionQuery = document.getElementById('filterActionSelect').value;
+      const dateQuery = document.getElementById('filterDateSelect').value;
+      const statusQuery = document.getElementById('filterStatusSelect').value;
+
+      const now = new Date();
+      const todayStr = "30/09/2026";
+      const yesterdayStr = "29/09/2026";
+
+      filteredOperations = mockOperations.filter(op => {
+        // Filtro texto
+        const matchText = op.operator.toLowerCase().includes(operatorQuery) ||
+                          op.item.toLowerCase().includes(operatorQuery) ||
+                          op.id.toLowerCase().includes(operatorQuery) ||
+                          op.sector.toLowerCase().includes(operatorQuery);
+        if (!matchText) return false;
+
+        // Filtro acción
+        if (actionQuery !== 'ALL' && op.action !== actionQuery) return false;
+
+        // Filtro estado
+        if (statusQuery !== 'ALL' && op.status !== statusQuery) return false;
+
+        // Filtro fecha
+        if (dateQuery === 'TODAY' && !op.date.startsWith(todayStr)) return false;
+        if (dateQuery === 'YESTERDAY' && !op.date.startsWith(yesterdayStr)) return false;
+        if (dateQuery === 'WEEK') {
+          // Últimos 7 días
+          const diffDays = (now - op.timestamp) / (1000 * 3600 * 24);
+          if (diffDays > 7) return false;
+        }
+
+        return true;
+      });
+
+      currentPage = 1;
+      renderOperationsTable();
+    }
+
+    function resetFilters() {
+      document.getElementById('filterOperatorInput').value = '';
+      document.getElementById('filterActionSelect').value = 'ALL';
+      document.getElementById('filterDateSelect').value = 'ALL';
+      document.getElementById('filterStatusSelect').value = 'ALL';
+      document.getElementById('globalSearchInput').value = '';
+      applyFilters();
+    }
+
+    function handleGlobalSearch(val) {
+      document.getElementById('filterOperatorInput').value = val;
+      switchView('operaciones');
+      applyFilters();
+    }
+
+    function renderOperationsTable() {
+      const tbody = document.getElementById('operationsTableBody');
+      const emptyState = document.getElementById('emptyTableState');
+      const resultsCount = document.getElementById('filterResultsCount');
+      const totalOpsBadge = document.getElementById('totalOpsBadge');
+
+      totalOpsBadge.textContent = mockOperations.length;
+
+      if (filteredOperations.length === 0) {
+        tbody.innerHTML = '';
+        emptyState.classList.remove('hidden');
+        resultsCount.textContent = '0 registros encontrados';
+        updatePagination(0);
+        return;
+      }
+
+      emptyState.classList.add('hidden');
+
+      // Calcular slice de paginación
+      const totalPages = Math.ceil(filteredOperations.length / itemsPerPage);
+      if (currentPage > totalPages) currentPage = totalPages;
+      const startIndex = (currentPage - 1) * itemsPerPage;
+      const endIndex = Math.min(startIndex + itemsPerPage, filteredOperations.length);
+      const currentItems = filteredOperations.slice(startIndex, endIndex);
+
+      resultsCount.textContent = `Mostrando ${startIndex + 1}-${endIndex} de ${filteredOperations.length} registros`;
+
+      tbody.innerHTML = currentItems.map(op => {
+        // Estilo según tipo de acción
+        let actionBadge = '';
+        if (op.action === 'Retiro') {
+          actionBadge = `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+            <svg class="w-3 h-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+            Retiro
+          </span>`;
+        } else if (op.action === 'Devolución') {
+          actionBadge = `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <svg class="w-3 h-3 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>
+            Devolución
+          </span>`;
+        } else {
+          actionBadge = `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-red-50 text-red-700 border border-red-200">
+            <svg class="w-3 h-3 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            Reporte Falla
+          </span>`;
+        }
+
+        // Estilo según estado
+        let statusBadge = '';
+        if (op.status === 'Completado') {
+          statusBadge = `<span class="inline-flex items-center gap-1.5 text-emerald-700 font-semibold">
+            <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Completado
+          </span>`;
+        } else {
+          statusBadge = `<span class="inline-flex items-center gap-1.5 text-amber-700 font-semibold">
+            <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span> Pendiente
+          </span>`;
+        }
+
+        return `
+          <tr class="hover:bg-slate-50/80 transition-colors">
+            <td class="py-3.5 px-4 font-mono text-[11px] text-slate-500">${op.date}</td>
+            <td class="py-3.5 px-4 font-mono font-bold text-brand-navy">${op.id}</td>
+            <td class="py-3.5 px-4">
+              <div class="font-medium text-slate-900">${op.operator}</div>
+              <div class="text-[10px] text-slate-400 font-medium">${op.sector}</div>
+            </td>
+            <td class="py-3.5 px-4">${actionBadge}</td>
+            <td class="py-3.5 px-4 font-medium text-slate-800">${op.item}</td>
+            <td class="py-3.5 px-4">${statusBadge}</td>
+            <td class="py-3.5 px-4 text-right">
+              <button onclick="viewOperationDetail('${op.id}')" class="text-brand-navy hover:text-brand-navy-light font-semibold hover:underline cursor-pointer">
+                Ver Ficha
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      updatePagination(totalPages);
+    }
+
+    function updatePagination(totalPages) {
+      document.getElementById('currentPageNum').textContent = totalPages > 0 ? currentPage : 0;
+      document.getElementById('totalPagesNum').textContent = totalPages;
+
+      const prevBtn = document.getElementById('prevPageBtn');
+      const nextBtn = document.getElementById('nextPageBtn');
+      prevBtn.disabled = currentPage <= 1;
+      nextBtn.disabled = currentPage >= totalPages || totalPages === 0;
+
+      const pagesContainer = document.getElementById('paginationPages');
+      pagesContainer.innerHTML = '';
+
+      for (let i = 1; i <= totalPages; i++) {
+        const btn = document.createElement('button');
+        btn.textContent = i;
+        btn.className = `w-7 h-7 rounded-lg text-xs font-semibold transition-all ${
+          i === currentPage
+            ? 'bg-brand-navy text-white shadow-xs'
+            : 'text-slate-600 hover:bg-slate-100'
+        }`;
+        btn.onclick = () => {
+          currentPage = i;
+          renderOperationsTable();
+        };
+        pagesContainer.appendChild(btn);
+      }
+    }
+
+    function changePage(delta) {
+      currentPage += delta;
+      renderOperationsTable();
+    }
+
+    // ----------------------------------------------------
+    // VISTA ALERTAS: RENDER Y ENVÍO DE NOTIFICACIÓN
+    // ----------------------------------------------------
+    function filterAlerts(type) {
+      currentAlertFilter = type;
+      ['ALL', 'urgent', 'warning'].forEach(t => {
+        const btn = document.getElementById(`filterAlert-${t}`);
+        if (t === type) {
+          btn.className = 'px-3 py-1.5 rounded-lg bg-brand-navy text-white font-semibold transition-all';
+        } else {
+          btn.className = 'px-3 py-1.5 rounded-lg text-slate-600 hover:text-brand-navy transition-all';
+        }
+      });
+      renderAlerts();
+    }
+
+    function renderAlerts() {
+      const container = document.getElementById('alertsContainer');
+      const activeAlerts = mockAlerts.filter(a => currentAlertFilter === 'ALL' || a.type === currentAlertFilter);
+      
+      const unnotifiedCount = mockAlerts.filter(a => !a.notified).length;
+      document.getElementById('bellBadge').textContent = unnotifiedCount;
+      document.getElementById('sidebarAlertsCount').textContent = unnotifiedCount;
+      document.getElementById('alertsBadgeView').textContent = `${unnotifiedCount} Activas`;
+      document.getElementById('kpiAlertCount').textContent = unnotifiedCount;
+
+      container.innerHTML = activeAlerts.map(alert => {
+        const isUrgent = alert.type === 'urgent';
+        const cardBorder = isUrgent ? 'border-red-200 bg-red-50/20' : 'border-amber-200 bg-amber-50/20';
+        const iconBg = isUrgent ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600';
+        const badgeColor = isUrgent ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800';
+
+        const actionButton = alert.notified
+          ? `<button class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-700 text-xs font-bold shadow-xs cursor-default">
+              <span>Aviso Enviado ✔️</span>
+            </button>`
+          : `<button onclick="sendAlertNotice('${alert.id}')" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-navy hover:bg-brand-navy-light text-white text-xs font-bold transition-all shadow-xs active:scale-95 cursor-pointer">
+              <svg class="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.664-.698c.969.585 1.961.913 2.796.913 3.179 0 5.767-2.587 5.767-5.766.001-3.181-2.587-5.767-5.767-5.767zm0 10.355c-.752 0-1.636-.264-2.321-.699l-.166-.105-1.58.414.422-1.542-.113-.18c-.718-1.144-.999-2.02-.998-3.243.001-2.518 2.05-4.566 4.568-4.566 2.519 0 4.567 2.049 4.567 4.568 0 2.519-2.048 4.568-4.567 4.568z"/></svg>
+              <span>Enviar Aviso (WhatsApp)</span>
+            </button>`;
+
+        return `
+          <div class="bg-white rounded-2xl border ${cardBorder} p-6 shadow-2xs relative overflow-hidden flex flex-col justify-between">
+            <div>
+              <div class="flex items-start justify-between gap-3 mb-3">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-xl ${iconBg} flex items-center justify-center text-lg flex-shrink-0">
+                    ${alert.icon}
+                  </div>
+                  <div>
+                    <span class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${badgeColor} mb-1">
+                      ${isUrgent ? 'Falla / Urgente' : 'Advertencia Preventiva'}
+                    </span>
+                    <h3 class="font-display font-bold text-slate-900 text-sm leading-snug">${alert.title}</h3>
+                  </div>
+                </div>
+              </div>
+
+              <p class="text-xs text-slate-600 mb-4 leading-relaxed">
+                ${alert.description}
+              </p>
+
+              <div class="grid grid-cols-2 gap-2 text-[11px] bg-slate-50 p-3 rounded-xl border border-slate-200/60 mb-5">
+                <div>
+                  <span class="text-slate-400 block font-medium">Plazo Límite:</span>
+                  <span class="font-semibold text-slate-800">${alert.deadline}</span>
+                </div>
+                <div>
+                  <span class="text-slate-400 block font-medium">Destinatario:</span>
+                  <span class="font-semibold text-slate-800">${alert.target}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-3 border-t border-slate-100 mt-auto">
+              <span class="text-[11px] text-slate-400 font-mono">ID: #${alert.id}</span>
+              ${actionButton}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function sendAlertNotice(alertId) {
+      const alert = mockAlerts.find(a => a.id === alertId);
+      if (!alert) return;
+
+      alert.notified = true;
+      renderAlerts();
+      updateNotificationsDropdown();
+
+      showToast(`Aviso enviado a ${alert.target} (${alert.phone})`);
+    }
+
+    function updateNotificationsDropdown() {
+      const list = document.getElementById('notifDropdownList');
+      list.innerHTML = mockAlerts.map(a => `
+        <div class="p-3 hover:bg-slate-50 transition-colors cursor-pointer" onclick="switchView('alertas'); toggleNotificationDropdown();">
+          <div class="flex items-center gap-2">
+            <span class="text-base">${a.icon}</span>
+            <div class="text-xs font-semibold text-slate-800 truncate">${a.title}</div>
+          </div>
+          <div class="text-[11px] text-slate-400 mt-0.5 truncate pl-6">${a.deadline}</div>
+        </div>
+      `).join('');
+    }
+
+    function toggleNotificationDropdown() {
+      const dd = document.getElementById('notifDropdown');
+      dd.classList.toggle('hidden');
+    }
+
+    // ----------------------------------------------------
+    // VISTA INVENTARIO & PERSONAL (EXTRAS PARA REALISMO)
+    // ----------------------------------------------------
+    function renderInventory() {
+      const container = document.getElementById('inventoryCards');
+      container.innerHTML = mockInventory.map(item => `
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-[11px] font-mono text-slate-400">${item.code}</span>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${item.badge}">${item.category}</span>
+          </div>
+          <h4 class="font-display font-bold text-slate-900 text-sm mb-1">${item.name}</h4>
+          <p class="text-xs font-medium text-slate-600 mt-2">Estado: <span class="font-bold text-slate-800">${item.state}</span></p>
+        </div>
+      `).join('');
+    }
+
+    function renderStaff() {
+      const tbody = document.getElementById('personalTableBody');
+      tbody.innerHTML = mockStaff.map(p => `
+        <tr class="hover:bg-slate-50 transition-colors">
+          <td class="py-3 px-4 font-semibold text-slate-900">${p.name}</td>
+          <td class="py-3 px-4 text-slate-600">${p.sector}</td>
+          <td class="py-3 px-4 font-mono text-[11px] text-slate-500">${p.nfc}</td>
+          <td class="py-3 px-4 font-medium">${p.tools} en posesión</td>
+          <td class="py-3 px-4">
+            <span class="inline-flex items-center gap-1 text-emerald-700 font-semibold">
+              <span class="w-2 h-2 rounded-full bg-emerald-500"></span> ${p.status}
+            </span>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    // ----------------------------------------------------
+    // MODALES Y ACCIONES
+    // ----------------------------------------------------
+    function openNewOperationModal() {
+      const modal = document.getElementById('operationModal');
+      document.getElementById('newOperationForm').reset();
+      document.getElementById('modalTitle').textContent = 'Nuevo Registro de Operación';
+      modal.classList.remove('opacity-0', 'pointer-events-none');
+      modal.querySelector('div').classList.remove('scale-95');
+      modal.querySelector('div').classList.add('scale-100');
+    }
+
+    function closeModal() {
+      const modal = document.getElementById('operationModal');
+      modal.classList.add('opacity-0', 'pointer-events-none');
+      modal.querySelector('div').classList.add('scale-95');
+      modal.querySelector('div').classList.remove('scale-100');
+    }
+
+    function submitNewOperation(e) {
+      e.preventDefault();
+      const operator = document.getElementById('formOperator').value;
+      const action = document.getElementById('formAction').value;
+      const status = document.getElementById('formStatus').value;
+      const item = document.getElementById('formItem').value;
+
+      const now = new Date();
+      const newOp = {
+        id: `OP-${now.getFullYear()}-0930-${Math.floor(10 + Math.random() * 89)}`,
+        date: `30/09/2026 ${now.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}`,
+        timestamp: now,
+        operator,
+        action,
+        item,
+        status,
+        sector: "Planta Central"
+      };
+
+      mockOperations.unshift(newOp);
+      applyFilters();
+      closeModal();
+      showToast(`Registro ${newOp.id} guardado exitosamente`);
+    }
+
+    function viewOperationDetail(opId) {
+      const op = mockOperations.find(o => o.id === opId);
+      if (!op) return;
+      alert(`Ficha Técnica de Operación:\n\nID: ${op.id}\nFecha: ${op.date}\nOperario: ${op.operator} (${op.sector})\nAcción: ${op.action}\nÍtem: ${op.item}\nEstado: ${op.status}`);
+    }
+
+    function exportToCsv() {
+      let csvContent = "data:text/csv;charset=utf-8,Fecha,ID,Operario,Sector,Accion,Item,Estado\n";
+      filteredOperations.forEach(op => {
+        csvContent += `"${op.date}","${op.id}","${op.operator}","${op.sector}","${op.action}","${op.item}","${op.status}"\n`;
+      });
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `LOTUS_Operaciones_${new Date().toISOString().slice(0, 10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast("Archivo CSV descargado correctamente");
+    }
+
+    // Toast flotante
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toastMessage').textContent = message;
+      toast.classList.remove('translate-y-24', 'opacity-0', 'pointer-events-none');
+      setTimeout(() => {
+        toast.classList.add('translate-y-24', 'opacity-0', 'pointer-events-none');
+      }, 3500);
+    }
+
+    // Atajo de teclado universal Ctrl+K para buscar
+    window.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        document.getElementById('globalSearchInput').focus();
+      }
+    });
+
+    // Cerrar dropdown al hacer click fuera
+    window.addEventListener('click', (e) => {
+      const notifBtn = document.getElementById('notifBellBtn');
+      const notifDd = document.getElementById('notifDropdown');
+      if (notifDd && !notifDd.contains(e.target) && !notifBtn.contains(e.target)) {
+        notifDd.classList.add('hidden');
+      }
+    });
+  </script>
+</body>
+</html>

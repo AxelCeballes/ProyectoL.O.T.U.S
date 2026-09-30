@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>L.O.T.U.S. SOLUTIONS - Gestión de Pañol Industrial</title>
+  <!-- Google Fonts: Montserrat & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              navy: '#1A2B42',
+              'navy-light': '#253D5C',
+              'navy-dark': '#0F1A28',
+              'navy-subtle': '#E9EEF4',
+              bg: '#F8F9FA'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Montserrat', 'sans-serif']
+          },
+          animation: {
+            'pulse-soft': 'pulseSoft 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            'laser-sweep': 'laserSweep 2s ease-in-out infinite',
+            'ring-wave': 'ringWave 3s cubic-bezier(0, 0.2, 0.8, 1) infinite',
+          },
+          keyframes: {
+            pulseSoft: {
+              '0%, 100%': { transform: 'scale(1)', opacity: '1' },
+              '50%': { transform: 'scale(1.05)', opacity: '0.85' },
+            },
+            laserSweep: {
+              '0%, 100%': { top: '5%' },
+              '50%': { top: '92%' },
+            },
+            ringWave: {
+              '0%': { transform: 'scale(0.85)', opacity: '0.9' },
+              '70%': { transform: 'scale(1.6)', opacity: '0' },
+              '100%': { transform: 'scale(1.6)', opacity: '0' }
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Estilos base y transiciones suaves */
+    body {
+      background-color: #F8F9FA;
+      color: #1A2B42;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .screen-transition {
+      transition: opacity 0.35s ease, transform 0.35s ease;
+    }
+    .laser-line {
+      box-shadow: 0 0 14px 2px rgba(239, 68, 68, 0.85), 0 0 25px 5px rgba(239, 68, 68, 0.4);
+    }
+    .nfc-glow {
+      box-shadow: 0 0 35px -5px rgba(26, 43, 66, 0.25);
+    }
+  </style>
+</head>
+<body class="h-full flex flex-col font-sans bg-brand-bg text-brand-navy antialiased overflow-hidden selection:bg-brand-navy selection:text-white">
+
+  <!-- ========================================== -->
+  <!-- BARRA DE ENCABEZADO SUPERIOR (Kiosk Header) -->
+  <!-- ========================================== -->
+  <header class="w-full bg-white border-b border-slate-200/80 px-4 sm:px-8 py-2 flex items-center justify-between shadow-sm z-30 flex-shrink-0">
+    <!-- Logotipo y Nombre Institucional -->
+    <div class="flex items-center gap-3.5">
+      <img src="assets/WhatsApp%20Image%202026-09-30%20at%204.08.12%20PM.jpeg" alt="L.O.T.U.S. Solutions — Logic Optimization & Technology Unified Solutions" class="w-20 h-20 sm:w-24 sm:h-24 object-contain flex-shrink-0">
+    </div>
+
+    <!-- Indicadores de Estado de Terminal y Reloj -->
+    <div class="flex items-center gap-6 text-sm">
+      <div class="hidden md:flex items-center gap-2 px-3 py-1 bg-slate-100 rounded-full text-slate-600 text-xs font-medium">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+        <span>Terminal #04 · Pañol Central</span>
+      </div>
+
+      <!-- Reloj en tiempo real -->
+      <div class="text-right">
+        <div id="liveClock" class="font-mono font-bold text-base text-brand-navy">12:00:00</div>
+        <div id="liveDate" class="text-[11px] text-slate-500 font-medium capitalize">Miércoles, 30 de Septiembre</div>
+      </div>
+
+      <!-- Acceso al Dashboard de Administración -->
+      <a href="dashboard.html" title="Abrir Panel de Administración" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-navy-subtle hover:bg-brand-navy hover:text-white text-brand-navy rounded-xl text-xs font-semibold transition-all shadow-2xs border border-brand-navy/20">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+        </svg>
+        <span class="hidden sm:inline">Panel Admin</span>
+      </a>
+
+      <!-- Control de Audio (Beeps) -->
+      <button id="toggleAudioBtn" title="Activar/Desactivar sonido del lector" class="p-2 text-slate-400 hover:text-brand-navy rounded-lg hover:bg-slate-100 transition-colors">
+        <svg id="audioIconOn" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/>
+        </svg>
+        <svg id="audioIconOff" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15zM17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ========================================== -->
+  <!-- CONTENEDOR PRINCIPAL DE PANTALLAS (SPA)   -->
+  <!-- ========================================== -->
+  <main class="relative flex-1 min-h-0 w-full max-w-6xl mx-auto flex items-center justify-center overflow-y-auto p-4 sm:p-6">
+
+    <!-- ------------------------------------------ -->
+    <!-- PANTALLA 1: STANDBY (Esperando NFC)        -->
+    <!-- ------------------------------------------ -->
+    <section id="screen1" class="screen-transition w-full max-w-xl flex flex-col items-center text-center">
+      
+      <!-- Input oculto para capturar el lector de tarjetas RFID/NFC -->
+      <input type="text" id="nfcInput" class="opacity-0 absolute -top-96 pointer-events-none" autocomplete="off" autofocus aria-hidden="true">
+
+      <!-- Contenedor del ícono pulsante / Lector NFC -->
+      <div class="relative flex items-center justify-center mb-8 cursor-pointer group" onclick="simulateNfcScan()" title="Haga clic o presione Enter para simular NFC">
+        <!-- Anillos concéntricos de onda NFC -->
+        <div class="absolute w-48 h-48 rounded-full border-2 border-brand-navy/30 animate-ring-wave"></div>
+        <div class="absolute w-48 h-48 rounded-full border border-brand-navy/20 animate-ring-wave" style="animation-delay: 1s;"></div>
+
+        <img src="assets/WhatsApp%20Image%202026-09-30%20at%204.08.12%20PM.jpeg" alt="L.O.T.U.S. Solutions — Logic Optimization & Technology Unified Solutions" class="relative w-44 h-44 sm:w-48 sm:h-48 object-contain rounded-xl shadow-sm transition-transform duration-300 group-hover:scale-105">
+      </div>
+
+      <!-- Mensaje Instruccional -->
+      <div class="bg-white px-8 py-5 rounded-2xl border border-slate-200 shadow-sm max-w-md w-full mb-6">
+        <p class="text-base md:text-lg font-medium text-brand-navy">
+          Por favor, apoye su tarjeta <span class="font-bold text-brand-navy">NFC</span> en el lector para ingresar.
+        </p>
+      </div>
+
+      <!-- Ayuda y botón de simulación interactiva para pruebas rápidas -->
+      <div class="flex flex-col items-center gap-2">
+        <button onclick="simulateNfcScan()" class="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 text-xs font-medium rounded-full transition-all active:scale-95 shadow-xs cursor-pointer">
+          <kbd class="px-1.5 py-0.5 bg-white border border-slate-300 rounded font-mono font-bold text-[10px] text-slate-800 shadow-2xs">Enter ↵</kbd>
+          <span>Simular lectura de tarjeta</span>
+        </button>
+        <button onclick="openToolStatus()" class="inline-flex items-center gap-2 px-4 py-2 text-brand-navy hover:bg-brand-navy-subtle border border-brand-navy/20 text-xs font-semibold rounded-lg transition-colors cursor-pointer">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.25 12s3.5-7 9.75-7 9.75 7 9.75 7-3.5 7-9.75 7-9.75-7-9.75-7z"/><circle cx="12" cy="12" r="3" stroke-width="2"/>
+          </svg>
+          <span>Ver estado de herramientas</span>
+        </button>
+        <span class="text-[11px] text-slate-400">El lector HID mantiene el foco automático para ingreso instantáneo</span>
+      </div>
+
+    </section>
+
+
+    <!-- ------------------------------------------ -->
+    <!-- PANTALLA 2: DASHBOARD DEL OPERARIO        -->
+    <!-- ------------------------------------------ -->
+    <section id="screen2" class="screen-transition hidden w-full max-w-2xl flex flex-col">
+      
+      <!-- Tarjeta de Identificación del Operario -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mb-8 relative overflow-hidden">
+        <!-- Cinta decorativa superior en Azul Marino -->
+        <div class="absolute top-0 left-0 right-0 h-1.5 bg-brand-navy"></div>
+
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <!-- Datos del Operario -->
+          <div class="flex items-center gap-4">
+            <!-- Avatar con Iniciales -->
+            <div class="w-14 h-14 rounded-2xl bg-brand-navy-subtle border border-brand-navy/20 flex items-center justify-center font-display font-bold text-xl text-brand-navy flex-shrink-0">
+              JP
+            </div>
+
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="text-xs uppercase tracking-wider font-semibold text-slate-400">Credencial Operario</span>
+                <span class="text-xs font-mono text-slate-400">#OP-8492</span>
+              </div>
+              <h3 class="font-display font-bold text-2xl text-brand-navy leading-tight">
+                Juan Pérez
+              </h3>
+              <p class="text-sm text-slate-500 font-medium">
+                Sector: <span class="text-slate-800 font-semibold">Mantenimiento</span>
+              </p>
+            </div>
+          </div>
+
+          <!-- Indicador de Estado: Habilitado -->
+          <div class="sm:text-right flex sm:flex-col items-center sm:items-end justify-between gap-2 border-t sm:border-t-0 pt-3 sm:pt-0 border-slate-100">
+            <span class="text-[11px] uppercase tracking-wider text-slate-400 font-medium">Condición de Acceso</span>
+            <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span>Estado: Habilitado</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Título de Selección de Operación -->
+      <div class="mb-4 flex items-center justify-between">
+        <h4 class="font-display font-bold text-lg text-brand-navy tracking-tight">
+          Seleccione la operación a realizar
+        </h4>
+        <span class="text-xs text-slate-400 font-medium">Paso 2 de 3</span>
+      </div>
+
+      <!-- Dos Botones Grandes Bloque Sólido Azul Marino (#1A2B42) -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-8">
+        
+        <!-- Botón 1: RETIRO DE HERRAMIENTA -->
+        <button onclick="goToScan('RETIRO')" class="group relative flex flex-col items-center justify-center p-8 bg-brand-navy hover:bg-brand-navy-light text-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-200 transform hover:-translate-y-1 active:translate-y-0 active:scale-[0.99] border border-brand-navy-dark text-center cursor-pointer">
+          <!-- Icono de salida/herramienta -->
+          <div class="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center mb-4 group-hover:bg-white/20 transition-colors">
+            <svg class="w-9 h-9 text-white transform group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <!-- Flecha de salida con caja de herramienta -->
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+            </svg>
+          </div>
+          <span class="font-display font-extrabold text-xl tracking-wide uppercase text-white mb-1">
+            RETIRO DE HERRAMIENTA
+          </span>
+          <span class="text-xs text-slate-300 font-normal">
+            Salida de herramientas o equipos
+          </span>
+        </button>
+
+        <!-- Botón 2: DEVOLUCIÓN -->
+        <button onclick="goToScan('DEVOLUCIÓN')" class="group relative flex flex-col items-center justify-center p-8 bg-brand-navy hover:bg-brand-navy-light text-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-200 transform hover:-translate-y-1 active:translate-y-0 active:scale-[0.99] border border-brand-navy-dark text-center cursor-pointer">
+          <!-- Icono de entrada/devolución -->
+          <div class="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center mb-4 group-hover:bg-white/20 transition-colors">
+            <svg class="w-9 h-9 text-white transform group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <!-- Flecha de entrada -->
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/>
+            </svg>
+          </div>
+          <span class="font-display font-extrabold text-xl tracking-wide uppercase text-white mb-1">
+            DEVOLUCIÓN
+          </span>
+          <span class="text-xs text-slate-300 font-normal">
+            Reintegro de equipo al inventario
+          </span>
+        </button>
+
+      </div>
+
+      <!-- Botón Secundario: Cerrar Sesión -->
+      <div class="flex justify-center">
+        <button onclick="openToolStatus()" class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl border border-brand-navy/20 bg-white hover:bg-brand-navy-subtle text-brand-navy font-semibold text-sm transition-colors shadow-2xs cursor-pointer">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.25 12s3.5-7 9.75-7 9.75 7 9.75 7-3.5 7-9.75 7-9.75-7-9.75-7z"/><circle cx="12" cy="12" r="3" stroke-width="2"/>
+          </svg>
+          <span>Estado de herramientas</span>
+        </button>
+      </div>
+
+      <div class="flex justify-center mt-3">
+        <button onclick="logoutToStandby()" class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-600 hover:text-brand-navy font-medium text-sm transition-colors shadow-2xs cursor-pointer">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+          </svg>
+          <span>Cerrar sesión</span>
+        </button>
+      </div>
+
+    </section>
+
+    <section id="screen4" class="screen-transition hidden w-full max-w-5xl flex flex-col self-start py-2">
+      <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
+        <div>
+          <p class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Pañol central · Inventario</p>
+          <h2 class="font-display font-extrabold text-2xl sm:text-3xl text-brand-navy">Estado de herramientas</h2>
+          <p class="text-sm text-slate-500 mt-1">Consulta disponibilidad y ubicación de cada equipo.</p>
+        </div>
+        <button onclick="goToScreen(1)" class="inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 rounded-lg text-sm font-semibold transition-colors cursor-pointer">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+          Volver
+        </button>
+      </div>
+
+      <div class="grid grid-cols-3 gap-3 mb-5" aria-label="Resumen del inventario">
+        <div class="bg-white border border-slate-200 rounded-lg px-4 py-3">
+          <div class="text-xs text-slate-500">Disponibles</div>
+          <div id="availableCount" class="font-display font-bold text-2xl text-emerald-700">0</div>
+        </div>
+        <div class="bg-white border border-slate-200 rounded-lg px-4 py-3">
+          <div class="text-xs text-slate-500">En uso</div>
+          <div id="inUseCount" class="font-display font-bold text-2xl text-amber-700">0</div>
+        </div>
+        <div class="bg-white border border-slate-200 rounded-lg px-4 py-3">
+          <div class="text-xs text-slate-500">Mantenimiento</div>
+          <div id="maintenanceCount" class="font-display font-bold text-2xl text-rose-700">0</div>
+        </div>
+      </div>
+
+      <div class="flex flex-col sm:flex-row gap-3 mb-4">
+        <label class="relative flex-1">
+          <span class="sr-only">Buscar herramienta</span>
+          <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m20 20-4-4"/></svg>
+          <input id="toolSearch" type="search" placeholder="Buscar por nombre o código..." class="w-full pl-9 pr-3 py-2.5 bg-white border border-slate-300 rounded-lg text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-navy/20 focus:border-brand-navy">
+        </label>
+        <label>
+          <span class="sr-only">Filtrar por estado</span>
+          <select id="statusFilter" class="w-full sm:w-48 px-3 py-2.5 bg-white border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-navy/20 focus:border-brand-navy">
+            <option value="TODOS">Todos los estados</option>
+            <option value="Disponible">Disponible</option>
+            <option value="En uso">En uso</option>
+            <option value="Mantenimiento">Mantenimiento</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm">
+            <thead class="bg-slate-50 border-b border-slate-200 text-[11px] uppercase tracking-wider text-slate-500">
+              <tr><th class="px-4 py-3 font-semibold">Herramienta</th><th class="px-4 py-3 font-semibold">Código</th><th class="px-4 py-3 font-semibold">Estado</th><th class="px-4 py-3 font-semibold">Ubicación / responsable</th></tr>
+            </thead>
+            <tbody id="toolStatusRows" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+        <p id="emptyToolResults" class="hidden px-4 py-10 text-center text-sm text-slate-500">No se encontraron herramientas con esos criterios.</p>
+      </div>
+      <p class="text-[11px] text-slate-400 mt-3">Datos de demostración guardados en esta página; no se sincronizan con un sistema central.</p>
+    </section>
+
+
+    <!-- ------------------------------------------ -->
+    <!-- PANTALLA 3: ESCANEO DE HERRAMIENTA         -->
+    <!-- ------------------------------------------ -->
+    <section id="screen3" class="screen-transition hidden w-full max-w-xl flex flex-col items-center text-center">
+      
+      <!-- Input invisible con foco activo para pistola lectora láser -->
+      <input type="text" id="barcodeInput" class="opacity-0 absolute -top-96 pointer-events-none" autocomplete="off" aria-hidden="true">
+
+      <!-- Badge Contextual de la Operación en curso -->
+      <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-navy text-white text-xs font-display font-bold uppercase tracking-wider mb-4 shadow-sm">
+        <span id="currentOperationBadge">Operación: Retiro de Herramienta</span>
+      </div>
+
+      <!-- Título de Pantalla 3 -->
+      <h2 class="font-display font-bold text-2xl md:text-3xl text-brand-navy mb-2">
+        Escanee el código de barras de la herramienta
+      </h2>
+      <p class="text-sm text-slate-500 mb-8 max-w-md">
+        Apunte la pistola láser hacia el código de barras o código QR adherido al cuerpo del equipo.
+      </p>
+
+      <!-- Visor de Escaneo Láser Animado Kiosk -->
+      <div class="relative w-80 h-52 bg-white rounded-2xl border-2 border-slate-200 shadow-md p-6 flex flex-col items-center justify-center mb-8 overflow-hidden group cursor-pointer" onclick="simulateBarcodeScan()" title="Haga clic o presione Enter para simular lectura láser">
+        
+        <!-- Esquinas de mira de escáner óptico -->
+        <div class="absolute top-3 left-3 w-5 h-5 border-t-2 border-l-2 border-brand-navy"></div>
+        <div class="absolute top-3 right-3 w-5 h-5 border-t-2 border-r-2 border-brand-navy"></div>
+        <div class="absolute bottom-3 left-3 w-5 h-5 border-b-2 border-l-2 border-brand-navy"></div>
+        <div class="absolute bottom-3 right-3 w-5 h-5 border-b-2 border-r-2 border-brand-navy"></div>
+
+        <!-- Línea láser roja animada que barre verticalmente -->
+        <div class="absolute left-6 right-6 h-0.5 bg-red-500 laser-line animate-laser-sweep z-10 pointer-events-none"></div>
+
+        <!-- Gráfico del Código de Barras Vectorial -->
+        <div class="flex items-end justify-center gap-1.5 h-20 opacity-80 mb-2">
+          <div class="w-1.5 h-full bg-brand-navy"></div>
+          <div class="w-0.5 h-full bg-brand-navy"></div>
+          <div class="w-2 h-full bg-brand-navy"></div>
+          <div class="w-1 h-full bg-brand-navy"></div>
+          <div class="w-3 h-full bg-brand-navy"></div>
+          <div class="w-0.5 h-full bg-brand-navy"></div>
+          <div class="w-1.5 h-full bg-brand-navy"></div>
+          <div class="w-2.5 h-full bg-brand-navy"></div>
+          <div class="w-1 h-full bg-brand-navy"></div>
+          <div class="w-0.5 h-full bg-brand-navy"></div>
+          <div class="w-2 h-full bg-brand-navy"></div>
+          <div class="w-1.5 h-full bg-brand-navy"></div>
+          <div class="w-3 h-full bg-brand-navy"></div>
+          <div class="w-0.5 h-full bg-brand-navy"></div>
+        </div>
+
+        <div class="font-mono text-xs text-slate-500 tracking-widest font-semibold">
+          * LOTUS-TOOL-84920 *
+        </div>
+
+        <div class="mt-3 text-[11px] font-medium text-slate-400">
+          Sensor óptico activo · Esperando trigger
+        </div>
+      </div>
+
+      <!-- Botón de Simulación de Pistola Láser -->
+      <div class="flex flex-col items-center gap-3">
+        <button onclick="simulateBarcodeScan()" class="inline-flex items-center gap-2 px-5 py-2.5 bg-brand-navy hover:bg-brand-navy-light text-white text-xs font-semibold rounded-full transition-all active:scale-95 shadow-sm cursor-pointer">
+          <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+          </svg>
+          <span>Disparar lectura de código (<kbd class="font-mono bg-white/20 px-1 rounded">Enter ↵</kbd>)</span>
+        </button>
+
+        <!-- Botón para Cancelar y volver al Dashboard -->
+        <button onclick="goToScreen(2)" class="text-xs text-slate-500 hover:text-brand-navy font-medium underline underline-offset-4 transition-colors cursor-pointer">
+          Cancelar y volver al menú
+        </button>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ========================================== -->
+  <!-- MODAL / ALERTA VERDE DE ÉXITO ESTILIZADA   -->
+  <!-- ========================================== -->
+  <div id="successModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-brand-navy/60 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300">
+    <div id="modalBox" class="bg-white rounded-3xl border border-emerald-100 shadow-2xl p-8 max-w-md w-full text-center transform scale-90 transition-transform duration-300 relative overflow-hidden">
+      
+      <!-- Barra de progreso de cuenta regresiva (3 segundos) -->
+      <div class="absolute top-0 left-0 right-0 h-2 bg-slate-100">
+        <div id="countdownBar" class="h-full bg-emerald-500 w-full transition-all duration-[3000ms] ease-linear"></div>
+      </div>
+
+      <!-- Ícono de Éxito estilizado con check verde -->
+      <div class="w-20 h-20 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-5 shadow-sm">
+        <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+        </svg>
+      </div>
+
+      <!-- Título de la Alerta -->
+      <h3 id="successTitle" class="font-display font-extrabold text-2xl text-slate-900 mb-2">
+        Retiro registrado exitosamente
+      </h3>
+
+      <!-- Ficha de la Herramienta Escaneada -->
+      <div class="bg-slate-50 rounded-2xl p-4 border border-slate-200/80 mb-6 text-left">
+        <div class="text-[11px] font-semibold tracking-wider uppercase text-slate-400 mb-1">
+          Detalle del Registro
+        </div>
+        <div id="scannedToolName" class="font-display font-bold text-slate-800 text-base leading-snug">
+          Taladro Percutor Inalámbrico Bosch 18V
+        </div>
+        <div class="flex items-center justify-between text-xs text-slate-500 mt-2 pt-2 border-t border-slate-200/60 font-mono">
+          <span id="scannedToolId">ID: #LOTUS-84920</span>
+          <span>Operario: J. Pérez</span>
+        </div>
+      </div>
+
+      <!-- Mensaje de redirección automática -->
+      <p class="text-xs text-slate-500 flex items-center justify-center gap-1.5 font-medium">
+        <svg class="w-4 h-4 animate-spin text-emerald-600" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <span>Redirigiendo a pantalla inicial en <span id="timerSeconds" class="font-bold text-slate-700">3</span>s...</span>
+      </p>
+
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- PIE DE PÁGINA (Footer Institucional)       -->
+  <!-- ========================================== -->
+  <footer class="w-full bg-white border-t border-slate-200/80 py-3 px-8 text-center text-xs text-slate-400 flex flex-col sm:flex-row items-center justify-between gap-2 flex-shrink-0">
+    <div class="flex items-center gap-2">
+      <span class="font-display font-semibold text-brand-navy">L.O.T.U.S. SOLUTIONS</span>
+      <span>&copy; 2026 Todos los derechos reservados</span>
+    </div>
+    <div class="flex items-center gap-4 text-[11px] text-slate-400">
+      <span>Sistema Pañol v2.4</span>
+      <span>·</span>
+      <span>ISO 9001 Compliance</span>
+      <span>·</span>
+      <span class="flex items-center gap-1">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Servidor Conectado
+      </span>
+    </div>
+  </footer>
+
+  <!-- ========================================== -->
+  <!-- LÓGICA DE CONTROL EN JAVASCRIPT            -->
+  <!-- ========================================== -->
+  <script>
+    // Estado global de la aplicación
+    const state = {
+      currentScreen: 1,
+      currentOperation: 'RETIRO', // 'RETIRO' o 'DEVOLUCIÓN'
+      soundEnabled: true,
+      countdownTimer: null,
+      countdownInterval: null,
+      mockTools: [
+        { name: "Taladro Percutor Bosch GSB 18V-50", id: "#LOTUS-TL-84920" },
+        { name: "Amoladora Angular DeWalt DWE4020 800W", id: "#LOTUS-AM-10492" },
+        { name: "Llave Dinamométrica Torquímetro 1/2\"", id: "#LOTUS-TQ-55201" },
+        { name: "Multímetro Digital Fluke 117 True-RMS", id: "#LOTUS-MT-30219" },
+        { name: "Juego de Tubos Bocallave Stanley 94 pzas", id: "#LOTUS-JB-77140" }
+      ],
+      inventory: [
+        { name: "Taladro Percutor Bosch GSB 18V-50", id: "#LOTUS-TL-84920", status: "En uso", location: "J. Pérez · Mantenimiento" },
+        { name: "Amoladora Angular DeWalt DWE4020 800W", id: "#LOTUS-AM-10492", status: "Disponible", location: "Estante A-03" },
+        { name: "Llave Dinamométrica Torquímetro 1/2\"", id: "#LOTUS-TQ-55201", status: "Mantenimiento", location: "Taller de calibración" },
+        { name: "Multímetro Digital Fluke 117 True-RMS", id: "#LOTUS-MT-30219", status: "Disponible", location: "Estante B-01" },
+        { name: "Juego de Tubos Bocallave Stanley 94 pzas", id: "#LOTUS-JB-77140", status: "En uso", location: "M. Gómez · Mecánica" }
+      ]
+    };
+
+    // Referencias al DOM
+    const screens = {
+      1: document.getElementById('screen1'),
+      2: document.getElementById('screen2'),
+      3: document.getElementById('screen3'),
+      4: document.getElementById('screen4'),
+    };
+    const nfcInput = document.getElementById('nfcInput');
+    const barcodeInput = document.getElementById('barcodeInput');
+    const successModal = document.getElementById('successModal');
+    const modalBox = document.getElementById('modalBox');
+    const successTitle = document.getElementById('successTitle');
+    const scannedToolName = document.getElementById('scannedToolName');
+    const scannedToolId = document.getElementById('scannedToolId');
+    const currentOperationBadge = document.getElementById('currentOperationBadge');
+    const countdownBar = document.getElementById('countdownBar');
+    const timerSeconds = document.getElementById('timerSeconds');
+    const toggleAudioBtn = document.getElementById('toggleAudioBtn');
+    const audioIconOn = document.getElementById('audioIconOn');
+    const audioIconOff = document.getElementById('audioIconOff');
+    const toolSearch = document.getElementById('toolSearch');
+    const statusFilter = document.getElementById('statusFilter');
+    const toolStatusRows = document.getElementById('toolStatusRows');
+    const emptyToolResults = document.getElementById('emptyToolResults');
+
+    function renderToolStatus() {
+      const query = toolSearch.value.trim().toLocaleLowerCase('es');
+      const selectedStatus = statusFilter.value;
+      const visibleTools = state.inventory.filter((tool) => {
+        const matchesQuery = `${tool.name} ${tool.id} ${tool.location}`.toLocaleLowerCase('es').includes(query);
+        return matchesQuery && (selectedStatus === 'TODOS' || tool.status === selectedStatus);
+      });
+      const statusStyles = {
+        'Disponible': 'bg-emerald-50 text-emerald-700 border-emerald-200',
+        'En uso': 'bg-amber-50 text-amber-700 border-amber-200',
+        'Mantenimiento': 'bg-rose-50 text-rose-700 border-rose-200'
+      };
+
+      toolStatusRows.innerHTML = visibleTools.map((tool) => `
+        <tr class="hover:bg-slate-50/80">
+          <td class="px-4 py-3.5 font-semibold text-slate-800 min-w-56">${tool.name}</td>
+          <td class="px-4 py-3.5 font-mono text-xs text-slate-500 whitespace-nowrap">${tool.id}</td>
+          <td class="px-4 py-3.5 whitespace-nowrap"><span class="inline-flex items-center px-2.5 py-1 border rounded-full text-xs font-semibold ${statusStyles[tool.status]}">${tool.status}</span></td>
+          <td class="px-4 py-3.5 text-slate-600 min-w-48">${tool.location}</td>
+        </tr>`).join('');
+      emptyToolResults.classList.toggle('hidden', visibleTools.length > 0);
+      toolStatusRows.parentElement.classList.toggle('hidden', visibleTools.length === 0);
+
+      document.getElementById('availableCount').textContent = state.inventory.filter((tool) => tool.status === 'Disponible').length;
+      document.getElementById('inUseCount').textContent = state.inventory.filter((tool) => tool.status === 'En uso').length;
+      document.getElementById('maintenanceCount').textContent = state.inventory.filter((tool) => tool.status === 'Mantenimiento').length;
+    }
+
+    function openToolStatus() {
+      renderToolStatus();
+      goToScreen(4);
+    }
+
+    toolSearch.addEventListener('input', renderToolStatus);
+    statusFilter.addEventListener('change', renderToolStatus);
+
+    // Inicializar reloj
+    function updateClock() {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+      const dateStr = now.toLocaleDateString('es-AR', options);
+      
+      const clockEl = document.getElementById('liveClock');
+      const dateEl = document.getElementById('liveDate');
+      if (clockEl) clockEl.textContent = timeStr;
+      if (dateEl) dateEl.textContent = dateStr;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // ----------------------------------------------------
+    // SÍNTESIS DE AUDIO (Web Audio API para beeps industriales)
+    // ----------------------------------------------------
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    let audioCtx = null;
+
+    function playTone(freq, duration, type = 'sine', delay = 0) {
+      if (!state.soundEnabled) return;
+      try {
+        if (!audioCtx) audioCtx = new AudioContext();
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime + delay);
+        gain.gain.setValueAtTime(0.12, audioCtx.currentTime + delay);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + delay + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(audioCtx.currentTime + delay);
+        osc.stop(audioCtx.currentTime + delay + duration);
+      } catch (e) {
+        // En caso de que el navegador bloquee Web Audio sin gesto de usuario
+      }
+    }
+
+    // Sonido lectura NFC (Doble tono ascendente armónico)
+    function playNfcSound() {
+      playTone(587.33, 0.12, 'sine', 0); // D5
+      playTone(880.00, 0.18, 'sine', 0.1); // A5
+    }
+
+    // Sonido lectura Barcode (Beep agudo clásico de pistola láser industrial)
+    function playBarcodeSound() {
+      playTone(1800, 0.10, 'square', 0);
+    }
+
+    // Toggle de sonido
+    toggleAudioBtn.addEventListener('click', () => {
+      state.soundEnabled = !state.soundEnabled;
+      if (state.soundEnabled) {
+        audioIconOn.classList.remove('hidden');
+        audioIconOff.classList.add('hidden');
+        playTone(880, 0.08);
+      } else {
+        audioIconOn.classList.add('hidden');
+        audioIconOff.classList.remove('hidden');
+      }
+    });
+
+    // ----------------------------------------------------
+    // GESTIÓN DE FOCO Y TECLADO (HID WEDGE EMULATION)
+    // ----------------------------------------------------
+    function maintainFocus() {
+      if (state.currentScreen === 1) {
+        nfcInput.focus();
+      } else if (state.currentScreen === 3) {
+        barcodeInput.focus();
+      }
+    }
+
+    // Re-enfocar automáticamente si el usuario hace clic en el área
+    window.addEventListener('click', (e) => {
+      // Si no es un botón explícito, volver el foco al sensor correspondiente
+      if (!e.target.closest('button') && !e.target.closest('a')) {
+        maintainFocus();
+      }
+    });
+
+    // Escucha global de teclado (simulación de periféricos HID NFC y Barcode)
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        if (state.currentScreen === 1) {
+          e.preventDefault();
+          simulateNfcScan();
+        } else if (state.currentScreen === 3 && !successModal.classList.contains('opacity-100')) {
+          e.preventDefault();
+          simulateBarcodeScan();
+        }
+      }
+    });
+
+    // ----------------------------------------------------
+    // CONTROL DE NAVEGACIÓN ENTRE PANTALLAS
+    // ----------------------------------------------------
+    function goToScreen(screenNumber) {
+      // Ocultar todas las pantallas con fade out
+      Object.keys(screens).forEach((num) => {
+        const el = screens[num];
+        if (parseInt(num) === screenNumber) {
+          el.classList.remove('hidden');
+          // Pequeño timeout para permitir transición de opacidad
+          setTimeout(() => {
+            el.classList.remove('opacity-0', 'scale-95');
+            el.classList.add('opacity-100', 'scale-100');
+          }, 20);
+        } else {
+          el.classList.add('opacity-0', 'scale-95');
+          setTimeout(() => {
+            el.classList.add('hidden');
+          }, 200);
+        }
+      });
+
+      state.currentScreen = screenNumber;
+
+      // Foco según pantalla
+      setTimeout(maintainFocus, 250);
+    }
+
+    // Simulación Pantalla 1: Lector NFC
+    function simulateNfcScan() {
+      playNfcSound();
+      nfcInput.value = '';
+      
+      // Feedback visual momentáneo
+      const nfcCircle = document.querySelector('.nfc-glow');
+      if (nfcCircle) {
+        nfcCircle.classList.add('ring-4', 'ring-emerald-400');
+        setTimeout(() => {
+          nfcCircle.classList.remove('ring-4', 'ring-emerald-400');
+          goToScreen(2);
+        }, 300);
+      } else {
+        goToScreen(2);
+      }
+    }
+
+    // Ir a Pantalla 3 desde Pantalla 2 (Retiro o Devolución)
+    function goToScan(operationType = 'RETIRO') {
+      state.currentOperation = operationType;
+      
+      if (operationType === 'RETIRO') {
+        currentOperationBadge.textContent = 'Operación: Retiro de Herramienta';
+      } else {
+        currentOperationBadge.textContent = 'Operación: Devolución de Herramienta';
+      }
+
+      goToScreen(3);
+    }
+
+    // Cerrar sesión
+    function logoutToStandby() {
+      goToScreen(1);
+    }
+
+    // Simulación Pantalla 3: Lector Código de Barras
+    function simulateBarcodeScan() {
+      playBarcodeSound();
+      barcodeInput.value = '';
+
+      // Seleccionar una herramienta al azar para demostrar dinamismo
+      const randomTool = state.mockTools[Math.floor(Math.random() * state.mockTools.length)];
+      scannedToolName.textContent = randomTool.name;
+      scannedToolId.textContent = `ID: ${randomTool.id}`;
+
+      // Configurar texto según la operación
+      if (state.currentOperation === 'RETIRO') {
+        successTitle.textContent = 'Retiro registrado exitosamente';
+      } else {
+        successTitle.textContent = 'Devolución registrada exitosamente';
+      }
+
+      // Mostrar modal de confirmación
+      showSuccessAlert();
+    }
+
+    function showSuccessAlert() {
+      // Activar modal
+      successModal.classList.remove('pointer-events-none');
+      successModal.classList.remove('opacity-0');
+      successModal.classList.add('opacity-100');
+
+      modalBox.classList.remove('scale-90');
+      modalBox.classList.add('scale-100');
+
+      // Animación de la barra de progreso de 3 segundos
+      countdownBar.style.width = '100%';
+      // Forzar reflow para reiniciar transición
+      void countdownBar.offsetWidth;
+      countdownBar.style.width = '0%';
+
+      // Cuenta regresiva numérica
+      let secondsLeft = 3;
+      timerSeconds.textContent = secondsLeft;
+
+      if (state.countdownInterval) clearInterval(state.countdownInterval);
+      state.countdownInterval = setInterval(() => {
+        secondsLeft -= 1;
+        if (secondsLeft >= 0) {
+          timerSeconds.textContent = secondsLeft;
+        }
+      }, 1000);
+
+      // Regresar a Pantalla 1 tras 3 segundos
+      if (state.countdownTimer) clearTimeout(state.countdownTimer);
+      state.countdownTimer = setTimeout(() => {
+        hideSuccessAlert();
+        goToScreen(1);
+      }, 3000);
+    }
+
+    function hideSuccessAlert() {
+      if (state.countdownInterval) clearInterval(state.countdownInterval);
+      modalBox.classList.remove('scale-100');
+      modalBox.classList.add('scale-90');
+
+      successModal.classList.remove('opacity-100');
+      successModal.classList.add('opacity-0');
+
+      setTimeout(() => {
+        successModal.classList.add('pointer-events-none');
+        countdownBar.style.width = '100%';
+      }, 300);
+    }
+
+    // Inicializar al cargar
+    window.addEventListener('DOMContentLoaded', () => {
+      maintainFocus();
+    });
+  </script>
+</body>
+</html>
