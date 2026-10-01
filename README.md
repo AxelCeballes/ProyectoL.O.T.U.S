@@ -37,3 +37,10 @@ Los datos que aparecen son ficticios. La página no registra movimientos reales,
 3. Elija retiro o devolución y presione `Enter` para disparar la lectura del código.
 4. Use «Estado de herramientas» para consultar el inventario de ejemplo y filtrar por estado o nombre.
 5. Use el botón «Sonidos» del encabezado para probar individualmente los sintetizadores de audio.
+
+## PARTICIPANTES
+
+AXEL CEBALLES
+FEDERICO LERA
+BERENICE
+AGUSTIN
