@@ -40,7 +40,7 @@ Los datos que aparecen son ficticios. La página no registra movimientos reales,
 
 ## PARTICIPANTES
 
-AXEL CEBALLES
-FEDERICO LERA
-BERENICE
-AGUSTIN
+-AXEL CEBALLES
+-FEDERICO LERA
+-BERENICE
+-AGUSTIN
