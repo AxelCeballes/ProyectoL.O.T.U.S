@@ -1,10 +1,9 @@
-# L.O.T.U.S. SOLUTIONS - Terminal de Pañol Industrial (SPA)
+# L.O.T.U.S. SOLUTIONS 
+Sistema de terminal de autoservicio para control y gestión de pañol 
 
-Sistema de terminal de autoservicio para control y gestión de pañol industrial desarrollado con **HTML5, Tailwind CSS y JavaScript**.
 
----
 
-## 🎨 Identidad Visual y Diseño (Light Mode Corporativo)
+  Identidad Visual y Diseño (Light Mode Corporativo)
 - **Marca**: L.O.T.U.S. SOLUTIONS (*Logic Optimization & Technology Unified Solutions*).
 - **Paleta de Colores**:
   - Color Primario Institucional: **Azul Marino Profundo** (`#1A2B42`).
@@ -13,9 +12,8 @@ Sistema de terminal de autoservicio para control y gestión de pañol industrial
 - **Tipografías**: Google Fonts (*Montserrat* para titulares e identidad de marca, e *Inter* para datos de alta legibilidad).
 - **Estilo**: Kiosk KDS industrial, minimalista, limpio y moderno.
 
----
 
-## 🚀 Flujo de Pantallas e Interacciones
+ Flujo de Pantallas e Interacciones
 
 ### 1. Pantalla 1: Standby (Esperando NFC)
 - Presenta el imagotipo oficial con anillos concéntricos y pulso armónico en Azul Marino.
@@ -39,11 +37,4 @@ Sistema de terminal de autoservicio para control y gestión de pañol industrial
   - Despliega una alerta modal verde estilizada con el mensaje **"Retiro registrado exitosamente"** (o devolución) y detalle del ítem.
   - Barra de progreso con temporizador que retorna automáticamente a la **Pantalla 1 tras 3 segundos**.
 
----
 
-## 🖥️ Cómo ejecutar y probar
-
-1. Abra directamente el archivo `index.html` en cualquier navegador web moderno (Chrome, Edge, Firefox, Safari).
-2. Para probar sin hardware físico:
-   - Presione la tecla **`Enter`** en el teclado en cualquier momento para simular la lectura de la tarjeta NFC o el disparo de la pistola de código de barras.
-   - También puede hacer clic directamente en los botones de simulación o en los visores centrales.
