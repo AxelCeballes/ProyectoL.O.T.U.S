@@ -2,6 +2,10 @@
 
 Guía rápida para el equipo de Falmet y pañol industrial.
 
+## Demo en línea
+
+[Abrir L.O.T.U.S. en Vercel](https://lotusweb-git-main-kirou.vercel.app/)
+
 ## ¿Para qué sirve?
 
 Es una demostración de una pantalla (kiosk SPA) para retirar y devolver herramientas del pañol de **L.O.T.U.S. SOLUTIONS** (*Logic Optimization & Technology Unified Solutions*). Permite recorrer el flujo y consultar una lista de herramientas de ejemplo.
