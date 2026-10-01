@@ -90,17 +90,6 @@
     body.dark-mode [class*="border-slate-"] {
       border-color: #334155 !important;
     }
-    body.dark-mode #inactivityNotice {
-      background-color: #1f2937;
-      border-color: #f59e0b;
-      color: #f8fafc;
-    }
-    body.dark-mode #inactivitySeconds {
-      color: #fde047;
-    }
-    body.dark-mode #inactivityNotice .bg-amber-100 {
-      background-color: #475569;
-    }
     .screen-transition {
       transition: opacity 0.35s ease, transform 0.35s ease;
     }
@@ -209,16 +198,6 @@
   <!-- ========================================== -->
   <!-- CONTENEDOR PRINCIPAL DE PANTALLAS (SPA)   -->
   <!-- ========================================== -->
-  <div id="inactivityNotice" class="hidden w-full border-b border-amber-100 bg-amber-50 px-4 py-1.5 text-xs text-slate-600 sm:px-8" role="status" aria-live="polite">
-    <div class="mx-auto flex max-w-6xl items-center justify-end gap-2">
-      <span>Vuelve a la página principal en</span>
-      <span class="whitespace-nowrap font-bold text-brand-navy"><span id="inactivitySeconds">120</span> s</span>
-      <div class="h-1.5 w-16 overflow-hidden rounded-full bg-amber-100">
-        <div id="inactivityProgress" class="h-full rounded-full bg-amber-400 transition-[width] duration-1000"></div>
-      </div>
-    </div>
-  </div>
-
   <main class="relative flex-1 min-h-0 w-full max-w-6xl mx-auto flex items-center justify-center overflow-y-auto p-4 sm:p-6">
 
     <!-- ------------------------------------------ -->
@@ -716,9 +695,6 @@
       soundEnabled: true,
       countdownTimer: null,
       countdownInterval: null,
-      inactivityTimer: null,
-      inactivityInterval: null,
-      sessionActive: false,
       mockTools: [
         { name: "Taladro Percutor Bosch GSB 18V-50", id: "#LOTUS-TL-84920" },
         { name: "Amoladora Angular DeWalt DWE4020 800W", id: "#LOTUS-AM-10492" },
@@ -762,47 +738,6 @@
     const statusFilter = document.getElementById('statusFilter');
     const toolStatusRows = document.getElementById('toolStatusRows');
     const emptyToolResults = document.getElementById('emptyToolResults');
-    const inactivityTimeout = 2 * 60 * 1000;
-    const inactivityNotice = document.getElementById('inactivityNotice');
-    const inactivitySeconds = document.getElementById('inactivitySeconds');
-    const inactivityProgress = document.getElementById('inactivityProgress');
-    let inactivityDeadline = 0;
-
-    function updateInactivityNotice() {
-      const remaining = Math.max(0, inactivityDeadline - Date.now());
-      inactivitySeconds.textContent = Math.ceil(remaining / 1000);
-      inactivityProgress.style.width = `${(remaining / inactivityTimeout) * 100}%`;
-    }
-
-    function isInactivityExemptTarget(target) {
-      return target instanceof Element && target.closest('#toggleThemeBtn, #toggleAudioBtn') !== null;
-    }
-
-    function resetInactivityTimer() {
-      if (!state.sessionActive) return;
-
-      clearTimeout(state.inactivityTimer);
-      inactivityDeadline = Date.now() + inactivityTimeout;
-      updateInactivityNotice();
-      state.inactivityTimer = setTimeout(logoutToStandby, inactivityTimeout);
-    }
-
-    function startSession() {
-      state.sessionActive = true;
-      inactivityNotice.classList.remove('hidden');
-      clearInterval(state.inactivityInterval);
-      state.inactivityInterval = setInterval(updateInactivityNotice, 250);
-      resetInactivityTimer();
-    }
-
-    function endSession() {
-      clearTimeout(state.inactivityTimer);
-      state.inactivityTimer = null;
-      clearInterval(state.inactivityInterval);
-      state.inactivityInterval = null;
-      inactivityNotice.classList.add('hidden');
-      state.sessionActive = false;
-    }
 
     function renderToolStatus() {
       const query = toolSearch.value.trim().toLocaleLowerCase('es');
@@ -1066,10 +1001,6 @@
 
     // Escucha global de teclado (simulación de periféricos HID NFC y Barcode)
     window.addEventListener('keydown', (e) => {
-      if (!isInactivityExemptTarget(e.target)) {
-        resetInactivityTimer();
-      }
-
       if (e.key === 'Escape') {
         if (!soundFxModal.classList.contains('opacity-0')) {
           toggleSoundFxPanel();
@@ -1086,22 +1017,10 @@
       }
     });
 
-    window.addEventListener('pointerdown', (e) => {
-      if (!isInactivityExemptTarget(e.target)) {
-        resetInactivityTimer();
-      }
-    });
-    window.addEventListener('input', resetInactivityTimer);
-    window.addEventListener('change', resetInactivityTimer);
-
     // ----------------------------------------------------
     // CONTROL DE NAVEGACIÓN ENTRE PANTALLAS
     // ----------------------------------------------------
     function goToScreen(screenNumber) {
-      if (screenNumber === 1) {
-        endSession();
-      }
-
       // Ocultar todas las pantallas con fade out
       Object.keys(screens).forEach((num) => {
         const el = screens[num];
@@ -1161,7 +1080,6 @@
       }
 
       setTimeout(() => {
-        startSession();
         goToScreen(2);
       }, 380);
     }
