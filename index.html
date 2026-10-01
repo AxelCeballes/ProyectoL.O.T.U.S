@@ -59,14 +59,85 @@
       user-select: none;
       -webkit-user-select: none;
     }
+    body.dark-mode,
+    body.dark-mode.bg-brand-bg {
+      background-color: #05070a;
+      color: #e2e8f0;
+    }
+    body.dark-mode header,
+    body.dark-mode footer {
+      background-color: #111827;
+      border-color: #334155;
+    }
+    body.dark-mode .bg-white {
+      background-color: #111827 !important;
+    }
+    body.dark-mode .bg-slate-50,
+    body.dark-mode .bg-slate-50\/80 {
+      background-color: #0b1220 !important;
+    }
+    body.dark-mode .bg-slate-100,
+    body.dark-mode .bg-slate-200 {
+      background-color: #1f2937 !important;
+    }
+    body.dark-mode .bg-brand-navy-subtle {
+      background-color: #253449 !important;
+    }
+    body.dark-mode [class*="text-brand-navy"],
+    body.dark-mode [class*="text-slate-"] {
+      color: #e2e8f0 !important;
+    }
+    body.dark-mode [class*="border-slate-"] {
+      border-color: #334155 !important;
+    }
     .screen-transition {
       transition: opacity 0.35s ease, transform 0.35s ease;
     }
     .laser-line {
       box-shadow: 0 0 14px 2px rgba(239, 68, 68, 0.85), 0 0 25px 5px rgba(239, 68, 68, 0.4);
+      transition: background-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .laser-green-flash {
+      background-color: #10B981 !important;
+      box-shadow: 0 0 20px 4px rgba(16, 185, 129, 0.95), 0 0 35px 8px rgba(16, 185, 129, 0.6) !important;
     }
     .nfc-glow {
       box-shadow: 0 0 35px -5px rgba(26, 43, 66, 0.25);
+    }
+    /* Animación del Checkmark SVG dibujándose */
+    .checkmark-path {
+      stroke-dasharray: 48;
+      stroke-dashoffset: 48;
+      animation: drawCheck 0.55s cubic-bezier(0.65, 0, 0.45, 1) forwards 0.15s;
+    }
+    @keyframes drawCheck {
+      to { stroke-dashoffset: 0; }
+    }
+    /* Animación de Tap táctil de la tarjeta NFC */
+    @keyframes cardDip {
+      0% { transform: scale(1) translateY(0); }
+      35% { transform: scale(0.92) translateY(5px); }
+      70% { transform: scale(1.05) translateY(-2px); }
+      100% { transform: scale(1) translateY(0); }
+    }
+    .animate-card-dip {
+      animation: cardDip 0.45s ease-out forwards;
+    }
+    /* Onda expansiva verde sonar */
+    @keyframes greenSonar {
+      0% { transform: scale(0.85); opacity: 0.95; }
+      100% { transform: scale(1.85); opacity: 0; }
+    }
+    .animate-green-sonar {
+      animation: greenSonar 0.7s cubic-bezier(0, 0.2, 0.8, 1) forwards;
+    }
+    /* Pulso suave de retícula/mira óptica */
+    @keyframes reticlePulse {
+      0%, 100% { transform: scale(1); opacity: 0.7; }
+      50% { transform: scale(1.06); opacity: 1; }
+    }
+    .animate-reticle {
+      animation: reticlePulse 2s ease-in-out infinite;
     }
   </style>
 </head>
@@ -78,7 +149,7 @@
   <header class="w-full bg-white border-b border-slate-200/80 px-4 sm:px-8 py-2 flex items-center justify-between shadow-sm z-30 flex-shrink-0">
     <!-- Logotipo y Nombre Institucional -->
     <div class="flex items-center gap-3.5">
-      <img src="assets/WhatsApp%20Image%202026-09-30%20at%204.08.12%20PM.jpeg" alt="L.O.T.U.S. Solutions — Logic Optimization & Technology Unified Solutions" class="w-20 h-20 sm:w-24 sm:h-24 object-contain flex-shrink-0">
+      <img src="assets/lotus-logo.png" alt="L.O.T.U.S. Solutions — Logic Optimization & Technology Unified Solutions" class="w-20 h-20 sm:w-24 sm:h-24 object-contain flex-shrink-0">
     </div>
 
     <!-- Indicadores de Estado de Terminal y Reloj -->
@@ -104,6 +175,23 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15zM17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/>
         </svg>
       </button>
+
+      <!-- Botón para Panel de Efectos de Sonido -->
+      <button id="toggleSoundFxBtn" onclick="toggleSoundFxPanel()" title="Probar efectos y sonidos" class="p-2 text-slate-400 hover:text-brand-navy rounded-lg hover:bg-slate-100 transition-colors flex items-center gap-1.5 text-xs font-semibold cursor-pointer">
+        <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
+        </svg>
+        <span class="hidden sm:inline text-slate-600">Sonidos</span>
+      </button>
+
+      <button id="toggleThemeBtn" type="button" aria-label="Activar fondo oscuro" aria-pressed="false" title="Activar fondo oscuro" class="p-2 text-slate-400 hover:text-brand-navy rounded-lg hover:bg-slate-100 transition-colors">
+        <svg id="themeIconMoon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.2 15.8A8.5 8.5 0 018.2 3.8a8.5 8.5 0 1012 12z"/>
+        </svg>
+        <svg id="themeIconSun" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="4" stroke-width="2"/><path stroke-linecap="round" stroke-width="2" d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3l1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3l1.42-1.42"/>
+        </svg>
+      </button>
     </div>
   </header>
 
@@ -121,12 +209,18 @@
       <input type="text" id="nfcInput" class="opacity-0 absolute -top-96 pointer-events-none" autocomplete="off" autofocus aria-hidden="true">
 
       <!-- Contenedor del ícono pulsante / Lector NFC -->
-      <div class="relative flex items-center justify-center mb-8 cursor-pointer group" onclick="simulateNfcScan()" title="Haga clic o presione Enter para simular NFC">
+      <div id="nfcTriggerArea" class="relative flex items-center justify-center mb-8 cursor-pointer group" onclick="simulateNfcScan()" title="Haga clic o presione Enter para simular NFC">
         <!-- Anillos concéntricos de onda NFC -->
         <div class="absolute w-48 h-48 rounded-full border-2 border-brand-navy/30 animate-ring-wave"></div>
         <div class="absolute w-48 h-48 rounded-full border border-brand-navy/20 animate-ring-wave" style="animation-delay: 1s;"></div>
+        
+        <!-- Onda Sonar Verde al escanear -->
+        <div id="nfcSonarWave" class="absolute w-48 h-48 rounded-full border-4 border-emerald-400 pointer-events-none opacity-0"></div>
 
-        <img src="assets/WhatsApp%20Image%202026-09-30%20at%204.08.12%20PM.jpeg" alt="L.O.T.U.S. Solutions — Logic Optimization & Technology Unified Solutions" class="relative w-44 h-44 sm:w-48 sm:h-48 object-contain rounded-xl shadow-sm transition-transform duration-300 group-hover:scale-105">
+        <!-- Tarjeta NFC interactiva con animación de Tap -->
+        <div id="nfcCardBadge" class="relative w-44 h-44 sm:w-48 sm:h-48 flex items-center justify-center transition-all duration-300 group-hover:scale-105">
+          <img src="assets/lotus-logo.png" alt="L.O.T.U.S. Solutions — Logic Optimization & Technology Unified Solutions" class="w-full h-full object-contain transition-transform duration-300">
+        </div>
       </div>
 
       <!-- Mensaje Instruccional -->
@@ -209,11 +303,13 @@
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-8">
         
         <!-- Botón 1: RETIRO DE HERRAMIENTA -->
-        <button onclick="goToScan('RETIRO')" class="group relative flex flex-col items-center justify-center p-8 bg-brand-navy hover:bg-brand-navy-light text-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-200 transform hover:-translate-y-1 active:translate-y-0 active:scale-[0.99] border border-brand-navy-dark text-center cursor-pointer">
-          <!-- Icono de salida/herramienta -->
-          <div class="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center mb-4 group-hover:bg-white/20 transition-colors">
-            <svg class="w-9 h-9 text-white transform group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <!-- Flecha de salida con caja de herramienta -->
+        <button onclick="playButtonTapSound(); goToScan('RETIRO')" class="group relative overflow-hidden flex flex-col items-center justify-center p-8 bg-brand-navy hover:bg-brand-navy-light text-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 active:translate-y-0 active:scale-[0.98] border border-brand-navy-dark text-center cursor-pointer">
+          <!-- Reflejo Shimmer diagonal en hover -->
+          <div class="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/15 to-transparent pointer-events-none"></div>
+
+          <!-- Icono de salida/herramienta con micro-animación -->
+          <div class="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center mb-4 group-hover:bg-white/20 transition-all duration-300 group-hover:scale-110">
+            <svg class="w-9 h-9 text-white transition-transform duration-300 group-hover:rotate-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
             </svg>
           </div>
@@ -226,11 +322,13 @@
         </button>
 
         <!-- Botón 2: DEVOLUCIÓN -->
-        <button onclick="goToScan('DEVOLUCIÓN')" class="group relative flex flex-col items-center justify-center p-8 bg-brand-navy hover:bg-brand-navy-light text-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-200 transform hover:-translate-y-1 active:translate-y-0 active:scale-[0.99] border border-brand-navy-dark text-center cursor-pointer">
-          <!-- Icono de entrada/devolución -->
-          <div class="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center mb-4 group-hover:bg-white/20 transition-colors">
-            <svg class="w-9 h-9 text-white transform group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <!-- Flecha de entrada -->
+        <button onclick="playButtonTapSound(); goToScan('DEVOLUCIÓN')" class="group relative overflow-hidden flex flex-col items-center justify-center p-8 bg-brand-navy hover:bg-brand-navy-light text-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 active:translate-y-0 active:scale-[0.98] border border-brand-navy-dark text-center cursor-pointer">
+          <!-- Reflejo Shimmer diagonal en hover -->
+          <div class="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/15 to-transparent pointer-events-none"></div>
+
+          <!-- Icono de entrada/devolución con micro-animación -->
+          <div class="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center mb-4 group-hover:bg-white/20 transition-all duration-300 group-hover:scale-110">
+            <svg class="w-9 h-9 text-white transition-transform duration-300 group-hover:-rotate-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/>
             </svg>
           </div>
@@ -244,9 +342,9 @@
 
       </div>
 
-      <!-- Botón Secundario: Cerrar Sesión -->
+      <!-- Botón Secundario: Estado de herramientas -->
       <div class="flex justify-center">
-        <button onclick="openToolStatus()" class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl border border-brand-navy/20 bg-white hover:bg-brand-navy-subtle text-brand-navy font-semibold text-sm transition-colors shadow-2xs cursor-pointer">
+        <button onclick="playButtonTapSound(); openToolStatus()" class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl border border-brand-navy/20 bg-white hover:bg-brand-navy-subtle text-brand-navy font-semibold text-sm transition-all duration-200 shadow-2xs hover:shadow-xs active:scale-95 cursor-pointer">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.25 12s3.5-7 9.75-7 9.75 7 9.75 7-3.5 7-9.75 7-9.75-7-9.75-7z"/><circle cx="12" cy="12" r="3" stroke-width="2"/>
           </svg>
@@ -255,7 +353,7 @@
       </div>
 
       <div class="flex justify-center mt-3">
-        <button onclick="logoutToStandby()" class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-600 hover:text-brand-navy font-medium text-sm transition-colors shadow-2xs cursor-pointer">
+        <button onclick="playButtonTapSound(); logoutToStandby()" class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-600 hover:text-brand-navy font-medium text-sm transition-all duration-200 shadow-2xs active:scale-95 cursor-pointer">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
           </svg>
@@ -272,9 +370,9 @@
           <h2 class="font-display font-extrabold text-2xl sm:text-3xl text-brand-navy">Estado de herramientas</h2>
           <p class="text-sm text-slate-500 mt-1">Consulta disponibilidad y ubicación de cada equipo.</p>
         </div>
-        <button onclick="goToScreen(1)" class="inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 rounded-lg text-sm font-semibold transition-colors cursor-pointer">
+        <button onclick="playButtonTapSound(); goToScreen(2)" class="inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 rounded-lg text-sm font-semibold transition-all shadow-2xs active:scale-95 cursor-pointer">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-          Volver
+          Volver al Menú
         </button>
       </div>
 
@@ -347,36 +445,45 @@
       </p>
 
       <!-- Visor de Escaneo Láser Animado Kiosk -->
-      <div class="relative w-80 h-52 bg-white rounded-2xl border-2 border-slate-200 shadow-md p-6 flex flex-col items-center justify-center mb-8 overflow-hidden group cursor-pointer" onclick="simulateBarcodeScan()" title="Haga clic o presione Enter para simular lectura láser">
+      <div id="scannerViewport" class="relative w-80 h-52 bg-white rounded-2xl border-2 border-slate-200 shadow-md p-6 flex flex-col items-center justify-center mb-8 overflow-hidden group cursor-pointer transition-all duration-300" onclick="simulateBarcodeScan()" title="Haga clic o presione Enter para simular lectura láser">
         
-        <!-- Esquinas de mira de escáner óptico -->
-        <div class="absolute top-3 left-3 w-5 h-5 border-t-2 border-l-2 border-brand-navy"></div>
-        <div class="absolute top-3 right-3 w-5 h-5 border-t-2 border-r-2 border-brand-navy"></div>
-        <div class="absolute bottom-3 left-3 w-5 h-5 border-b-2 border-l-2 border-brand-navy"></div>
-        <div class="absolute bottom-3 right-3 w-5 h-5 border-b-2 border-r-2 border-brand-navy"></div>
+        <!-- Esquinas de mira de escáner óptico con pulso animado -->
+        <div class="scanner-corner absolute top-3 left-3 w-5 h-5 border-t-2 border-l-2 border-brand-navy animate-reticle"></div>
+        <div class="scanner-corner absolute top-3 right-3 w-5 h-5 border-t-2 border-r-2 border-brand-navy animate-reticle"></div>
+        <div class="scanner-corner absolute bottom-3 left-3 w-5 h-5 border-b-2 border-l-2 border-brand-navy animate-reticle"></div>
+        <div class="scanner-corner absolute bottom-3 right-3 w-5 h-5 border-b-2 border-r-2 border-brand-navy animate-reticle"></div>
 
-        <!-- Línea láser roja animada que barre verticalmente -->
-        <div class="absolute left-6 right-6 h-0.5 bg-red-500 laser-line animate-laser-sweep z-10 pointer-events-none"></div>
-
-        <!-- Gráfico del Código de Barras Vectorial -->
-        <div class="flex items-end justify-center gap-1.5 h-20 opacity-80 mb-2">
-          <div class="w-1.5 h-full bg-brand-navy"></div>
-          <div class="w-0.5 h-full bg-brand-navy"></div>
-          <div class="w-2 h-full bg-brand-navy"></div>
-          <div class="w-1 h-full bg-brand-navy"></div>
-          <div class="w-3 h-full bg-brand-navy"></div>
-          <div class="w-0.5 h-full bg-brand-navy"></div>
-          <div class="w-1.5 h-full bg-brand-navy"></div>
-          <div class="w-2.5 h-full bg-brand-navy"></div>
-          <div class="w-1 h-full bg-brand-navy"></div>
-          <div class="w-0.5 h-full bg-brand-navy"></div>
-          <div class="w-2 h-full bg-brand-navy"></div>
-          <div class="w-1.5 h-full bg-brand-navy"></div>
-          <div class="w-3 h-full bg-brand-navy"></div>
-          <div class="w-0.5 h-full bg-brand-navy"></div>
+        <!-- Cruz central de mira holográfica (HUD Crosshair) -->
+        <div class="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20">
+          <div class="w-16 h-px bg-brand-navy"></div>
+          <div class="h-16 w-px bg-brand-navy absolute"></div>
         </div>
 
-        <div class="font-mono text-xs text-slate-500 tracking-widest font-semibold">
+        <!-- Plano translúcido de barrido láser -->
+        <div id="laserPlane" class="absolute left-6 right-6 h-10 bg-gradient-to-b from-red-500/20 to-transparent pointer-events-none transition-all duration-200"></div>
+
+        <!-- Línea láser roja animada que barre verticalmente -->
+        <div id="laserBeam" class="absolute left-6 right-6 h-0.5 bg-red-500 laser-line animate-laser-sweep z-10 pointer-events-none"></div>
+
+        <!-- Gráfico del Código de Barras Vectorial con líneas que se iluminan -->
+        <div id="barcodeLinesGroup" class="flex items-end justify-center gap-1.5 h-20 opacity-80 mb-2 transition-all duration-300">
+          <div class="w-1.5 h-full bg-brand-navy transition-colors"></div>
+          <div class="w-0.5 h-full bg-brand-navy transition-colors"></div>
+          <div class="w-2 h-full bg-brand-navy transition-colors"></div>
+          <div class="w-1 h-full bg-brand-navy transition-colors"></div>
+          <div class="w-3 h-full bg-brand-navy transition-colors"></div>
+          <div class="w-0.5 h-full bg-brand-navy transition-colors"></div>
+          <div class="w-1.5 h-full bg-brand-navy transition-colors"></div>
+          <div class="w-2.5 h-full bg-brand-navy transition-colors"></div>
+          <div class="w-1 h-full bg-brand-navy transition-colors"></div>
+          <div class="w-0.5 h-full bg-brand-navy transition-colors"></div>
+          <div class="w-2 h-full bg-brand-navy transition-colors"></div>
+          <div class="w-1.5 h-full bg-brand-navy transition-colors"></div>
+          <div class="w-3 h-full bg-brand-navy transition-colors"></div>
+          <div class="w-0.5 h-full bg-brand-navy transition-colors"></div>
+        </div>
+
+        <div id="barcodeCodeText" class="font-mono text-xs text-slate-500 tracking-widest font-semibold transition-colors">
           * LOTUS-TOOL-84920 *
         </div>
 
@@ -395,7 +502,7 @@
         </button>
 
         <!-- Botón para Cancelar y volver al Dashboard -->
-        <button onclick="goToScreen(2)" class="text-xs text-slate-500 hover:text-brand-navy font-medium underline underline-offset-4 transition-colors cursor-pointer">
+        <button onclick="playButtonTapSound(); goToScreen(2)" class="text-xs text-slate-500 hover:text-brand-navy font-medium underline underline-offset-4 transition-colors cursor-pointer">
           Cancelar y volver al menú
         </button>
       </div>
@@ -415,11 +522,14 @@
         <div id="countdownBar" class="h-full bg-emerald-500 w-full transition-all duration-[3000ms] ease-linear"></div>
       </div>
 
-      <!-- Ícono de Éxito estilizado con check verde -->
-      <div class="w-20 h-20 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-5 shadow-sm">
-        <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
-        </svg>
+      <!-- Ícono de Éxito estilizado con check verde animado -->
+      <div class="relative w-20 h-20 mx-auto mb-5">
+        <div class="absolute inset-0 rounded-full bg-emerald-400/25 animate-ping pointer-events-none"></div>
+        <div class="relative w-20 h-20 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shadow-md">
+          <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path id="modalCheckPath" class="checkmark-path" stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+          </svg>
+        </div>
       </div>
 
       <!-- Título de la Alerta -->
@@ -449,6 +559,108 @@
         </svg>
         <span>Redirigiendo a pantalla inicial en <span id="timerSeconds" class="font-bold text-slate-700">3</span>s...</span>
       </p>
+
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL / PANEL DE PRUEBA DE EFECTOS Y SONIDO -->
+  <!-- ========================================== -->
+  <div id="soundFxModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-brand-navy/60 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300">
+    <div id="soundFxBox" class="bg-white rounded-3xl border border-slate-200 shadow-2xl p-6 sm:p-8 max-w-lg w-full transform scale-95 transition-transform duration-300 relative">
+      
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-5">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/>
+            </svg>
+          </div>
+          <div>
+            <h3 class="font-display font-bold text-lg text-brand-navy leading-none">Centro de Efectos & Sonidos</h3>
+            <p class="text-[11px] text-slate-400 mt-1">Prueba los sintetizadores Web Audio API y animaciones en vivo.</p>
+          </div>
+        </div>
+
+        <button onclick="toggleSoundFxPanel()" class="text-slate-400 hover:text-brand-navy p-1.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <!-- Grid de botones de prueba de sonido -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+        
+        <button onclick="playNfcSound(); testNfcAnimation();" class="flex items-center gap-3 p-3.5 rounded-xl border border-slate-200 hover:border-brand-navy/40 hover:bg-slate-50 transition-all text-left group cursor-pointer active:scale-95">
+          <div class="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-sm group-hover:scale-110 transition-transform">
+            📶
+          </div>
+          <div>
+            <div class="text-xs font-bold text-slate-800">Lectura NFC</div>
+            <div class="text-[10px] text-slate-400">Doble tono armónico D5-A5</div>
+          </div>
+        </button>
+
+        <button onclick="playBarcodeSound(); testLaserAnimation();" class="flex items-center gap-3 p-3.5 rounded-xl border border-slate-200 hover:border-brand-navy/40 hover:bg-slate-50 transition-all text-left group cursor-pointer active:scale-95">
+          <div class="w-9 h-9 rounded-lg bg-red-50 text-red-600 flex items-center justify-center font-bold text-sm group-hover:scale-110 transition-transform">
+            🔫
+          </div>
+          <div>
+            <div class="text-xs font-bold text-slate-800">Disparo Láser</div>
+            <div class="text-[10px] text-slate-400">Beep agudo industrial 1.8kHz</div>
+          </div>
+        </button>
+
+        <button onclick="playSuccessChime(); testCheckAnimation();" class="flex items-center gap-3 p-3.5 rounded-xl border border-slate-200 hover:border-brand-navy/40 hover:bg-slate-50 transition-all text-left group cursor-pointer active:scale-95">
+          <div class="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-sm group-hover:scale-110 transition-transform">
+            ✨
+          </div>
+          <div>
+            <div class="text-xs font-bold text-slate-800">Éxito / Aprobado</div>
+            <div class="text-[10px] text-slate-400">Acorde triunfal C5-E5-G5-C6</div>
+          </div>
+        </button>
+
+        <button onclick="playButtonTapSound()" class="flex items-center gap-3 p-3.5 rounded-xl border border-slate-200 hover:border-brand-navy/40 hover:bg-slate-50 transition-all text-left group cursor-pointer active:scale-95">
+          <div class="w-9 h-9 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-sm group-hover:scale-110 transition-transform">
+            🔘
+          </div>
+          <div>
+            <div class="text-xs font-bold text-slate-800">Clic Táctil</div>
+            <div class="text-[10px] text-slate-400">Feedback físico de botón</div>
+          </div>
+        </button>
+
+        <button onclick="playThemeToggleSound()" class="flex items-center gap-3 p-3.5 rounded-xl border border-slate-200 hover:border-brand-navy/40 hover:bg-slate-50 transition-all text-left group cursor-pointer active:scale-95">
+          <div class="w-9 h-9 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center font-bold text-sm group-hover:scale-110 transition-transform">
+            🌗
+          </div>
+          <div>
+            <div class="text-xs font-bold text-slate-800">Switch Mecánico</div>
+            <div class="text-[10px] text-slate-400">Alternancia claro / oscuro</div>
+          </div>
+        </button>
+
+        <button onclick="playErrorSound()" class="flex items-center gap-3 p-3.5 rounded-xl border border-slate-200 hover:border-brand-navy/40 hover:bg-slate-50 transition-all text-left group cursor-pointer active:scale-95">
+          <div class="w-9 h-9 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center font-bold text-sm group-hover:scale-110 transition-transform">
+            ⚠️
+          </div>
+          <div>
+            <div class="text-xs font-bold text-slate-800">Alarma / Error</div>
+            <div class="text-[10px] text-slate-400">Doble buzzer industrial</div>
+          </div>
+        </button>
+
+      </div>
+
+      <div class="pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+        <span class="flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+          Audio sintetizado en tiempo real (0 archivos externos)
+        </span>
+        <button onclick="toggleSoundFxPanel()" class="px-4 py-2 bg-brand-navy text-white rounded-xl font-semibold hover:bg-brand-navy-light transition-colors cursor-pointer">
+          Cerrar
+        </button>
+      </div>
 
     </div>
   </div>
@@ -519,6 +731,9 @@
     const toggleAudioBtn = document.getElementById('toggleAudioBtn');
     const audioIconOn = document.getElementById('audioIconOn');
     const audioIconOff = document.getElementById('audioIconOff');
+    const toggleThemeBtn = document.getElementById('toggleThemeBtn');
+    const themeIconMoon = document.getElementById('themeIconMoon');
+    const themeIconSun = document.getElementById('themeIconSun');
     const toolSearch = document.getElementById('toolSearch');
     const statusFilter = document.getElementById('statusFilter');
     const toolStatusRows = document.getElementById('toolStatusRows');
@@ -576,42 +791,80 @@
     updateClock();
 
     // ----------------------------------------------------
-    // SÍNTESIS DE AUDIO (Web Audio API para beeps industriales)
+    // SÍNTESIS DE AUDIO AVANZADA (Web Audio API Industrial)
     // ----------------------------------------------------
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     let audioCtx = null;
 
-    function playTone(freq, duration, type = 'sine', delay = 0) {
+    function getAudioContext() {
+      if (!audioCtx) audioCtx = new AudioContext();
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      return audioCtx;
+    }
+
+    function playTone(freq, duration, type = 'sine', delay = 0, vol = 0.12) {
       if (!state.soundEnabled) return;
       try {
-        if (!audioCtx) audioCtx = new AudioContext();
-        if (audioCtx.state === 'suspended') {
-          audioCtx.resume();
-        }
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
+        const ctx = getAudioContext();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
         osc.type = type;
-        osc.frequency.setValueAtTime(freq, audioCtx.currentTime + delay);
-        gain.gain.setValueAtTime(0.12, audioCtx.currentTime + delay);
-        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + delay + duration);
+        osc.frequency.setValueAtTime(freq, ctx.currentTime + delay);
+        gain.gain.setValueAtTime(vol, ctx.currentTime + delay);
+        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + delay + duration);
         osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.start(audioCtx.currentTime + delay);
-        osc.stop(audioCtx.currentTime + delay + duration);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime + delay);
+        osc.stop(ctx.currentTime + delay + duration);
       } catch (e) {
-        // En caso de que el navegador bloquee Web Audio sin gesto de usuario
+        // Manejo silencioso en caso de bloqueo inicial de audio
       }
     }
 
-    // Sonido lectura NFC (Doble tono ascendente armónico)
+    // 1. Sonido lectura NFC (Doble tono ascendente armónico)
     function playNfcSound() {
-      playTone(587.33, 0.12, 'sine', 0); // D5
-      playTone(880.00, 0.18, 'sine', 0.1); // A5
+      playTone(587.33, 0.14, 'sine', 0, 0.16); // D5
+      playTone(880.00, 0.22, 'sine', 0.09, 0.18); // A5
     }
 
-    // Sonido lectura Barcode (Beep agudo clásico de pistola láser industrial)
+    // 2. Sonido lectura Barcode (Beep agudo clásico de pistola láser industrial)
     function playBarcodeSound() {
-      playTone(1800, 0.10, 'square', 0);
+      playTone(2200, 0.04, 'square', 0, 0.14);
+      playTone(1760, 0.08, 'square', 0.03, 0.18);
+    }
+
+    // 3. Sonido Éxito / Operación completada (Acorde trifónico brillante C5 -> E5 -> G5 -> C6)
+    function playSuccessChime() {
+      playTone(523.25, 0.18, 'triangle', 0, 0.14);    // C5
+      playTone(659.25, 0.18, 'triangle', 0.08, 0.15); // E5
+      playTone(783.99, 0.22, 'triangle', 0.16, 0.16); // G5
+      playTone(1046.50, 0.35, 'sine', 0.24, 0.18);    // C6
+    }
+
+    // 4. Sonido Clic Táctil (Feedback háptico para botones)
+    function playButtonTapSound() {
+      playTone(320, 0.03, 'sine', 0, 0.09);
+      playTone(160, 0.04, 'triangle', 0.01, 0.12);
+    }
+
+    // 5. Sonido de Alternancia de Tema (Switch mecánico sutil)
+    function playThemeToggleSound() {
+      playTone(750, 0.03, 'sine', 0, 0.12);
+      playTone(450, 0.04, 'sine', 0.03, 0.10);
+    }
+
+    // 6. Sonido de Alerta / Rechazo / Error (Doble buzzer industrial)
+    function playErrorSound() {
+      playTone(180, 0.10, 'sawtooth', 0, 0.16);
+      playTone(150, 0.18, 'sawtooth', 0.12, 0.18);
+    }
+
+    // 7. Sonido activación de láser (Laser Arming Sweep)
+    function playLaserArmSound() {
+      playTone(850, 0.08, 'sawtooth', 0, 0.06);
+      playTone(1350, 0.12, 'sine', 0.06, 0.08);
     }
 
     // Toggle de sonido
@@ -620,12 +873,113 @@
       if (state.soundEnabled) {
         audioIconOn.classList.remove('hidden');
         audioIconOff.classList.add('hidden');
-        playTone(880, 0.08);
+        playTone(880, 0.08, 'sine', 0, 0.15);
       } else {
         audioIconOn.classList.add('hidden');
         audioIconOff.classList.remove('hidden');
       }
     });
+
+    // Toggle de Modo Oscuro con sonido
+    function setDarkMode(enabled) {
+      document.body.classList.toggle('dark-mode', enabled);
+      toggleThemeBtn.setAttribute('aria-pressed', String(enabled));
+      toggleThemeBtn.setAttribute('aria-label', enabled ? 'Activar fondo claro' : 'Activar fondo oscuro');
+      toggleThemeBtn.title = enabled ? 'Activar fondo claro' : 'Activar fondo oscuro';
+      themeIconMoon.classList.toggle('hidden', enabled);
+      themeIconSun.classList.toggle('hidden', !enabled);
+      localStorage.setItem('lotus-dark-mode', String(enabled));
+    }
+
+    setDarkMode(localStorage.getItem('lotus-dark-mode') === 'true');
+    toggleThemeBtn.addEventListener('click', () => {
+      playThemeToggleSound();
+      setDarkMode(!document.body.classList.contains('dark-mode'));
+    });
+
+    // ----------------------------------------------------
+    // PANEL MODAL DE PRUEBAS DE SONIDO & EFECTOS
+    // ----------------------------------------------------
+    const soundFxModal = document.getElementById('soundFxModal');
+    const soundFxBox = document.getElementById('soundFxBox');
+
+    function toggleSoundFxPanel() {
+      playButtonTapSound();
+      const isHidden = soundFxModal.classList.contains('opacity-0');
+      if (isHidden) {
+        soundFxModal.classList.remove('pointer-events-none', 'opacity-0');
+        soundFxModal.classList.add('opacity-100');
+        soundFxBox.classList.remove('scale-95');
+        soundFxBox.classList.add('scale-100');
+      } else {
+        soundFxBox.classList.remove('scale-100');
+        soundFxBox.classList.add('scale-95');
+        soundFxModal.classList.remove('opacity-100');
+        soundFxModal.classList.add('opacity-0');
+        setTimeout(() => {
+          soundFxModal.classList.add('pointer-events-none');
+        }, 250);
+      }
+    }
+
+    // Funciones de prueba de animaciones desde el panel
+    function testNfcAnimation() {
+      const nfcCardBadge = document.getElementById('nfcCardBadge');
+      const nfcSonarWave = document.getElementById('nfcSonarWave');
+      if (nfcCardBadge) {
+        nfcCardBadge.classList.add('animate-card-dip');
+        setTimeout(() => nfcCardBadge.classList.remove('animate-card-dip'), 500);
+      }
+      if (nfcSonarWave) {
+        nfcSonarWave.classList.remove('animate-green-sonar');
+        void nfcSonarWave.offsetWidth;
+        nfcSonarWave.classList.add('animate-green-sonar');
+      }
+    }
+
+    function testLaserAnimation() {
+      const laserBeam = document.getElementById('laserBeam');
+      const scannerViewport = document.getElementById('scannerViewport');
+      const barcodeLines = document.getElementById('barcodeLinesGroup');
+      if (laserBeam) laserBeam.classList.add('laser-green-flash');
+      if (scannerViewport) scannerViewport.classList.add('border-emerald-400', 'ring-4', 'ring-emerald-400/30');
+      if (barcodeLines) barcodeLines.classList.add('text-emerald-500', 'opacity-100');
+      setTimeout(() => {
+        if (laserBeam) laserBeam.classList.remove('laser-green-flash');
+        if (scannerViewport) scannerViewport.classList.remove('border-emerald-400', 'ring-4', 'ring-emerald-400/30');
+        if (barcodeLines) barcodeLines.classList.remove('text-emerald-500', 'opacity-100');
+      }, 450);
+    }
+
+    function testCheckAnimation() {
+      const modalCheckPath = document.getElementById('modalCheckPath');
+      if (modalCheckPath) {
+        modalCheckPath.classList.remove('checkmark-path');
+        void modalCheckPath.offsetWidth;
+        modalCheckPath.classList.add('checkmark-path');
+      }
+    }
+
+    // Contador animado progresivo para estadísticas de inventario
+    function animateCounter(elementId, targetValue, duration = 650) {
+      const el = document.getElementById(elementId);
+      if (!el) return;
+      const start = 0;
+      const startTime = performance.now();
+      function update(now) {
+        const elapsed = now - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const easeOut = 1 - Math.pow(1 - progress, 3);
+        const current = Math.round(start + (targetValue - start) * easeOut);
+        el.textContent = current;
+        if (progress < 1) {
+          requestAnimationFrame(update);
+        } else {
+          el.textContent = targetValue;
+        }
+      }
+      requestAnimationFrame(update);
+    }
 
     // ----------------------------------------------------
     // GESTIÓN DE FOCO Y TECLADO (HID WEDGE EMULATION)
@@ -640,14 +994,18 @@
 
     // Re-enfocar automáticamente si el usuario hace clic en el área
     window.addEventListener('click', (e) => {
-      // Si no es un botón explícito, volver el foco al sensor correspondiente
-      if (!e.target.closest('button') && !e.target.closest('a')) {
+      if (!e.target.closest('button') && !e.target.closest('a') && !e.target.closest('input') && !e.target.closest('select')) {
         maintainFocus();
       }
     });
 
     // Escucha global de teclado (simulación de periféricos HID NFC y Barcode)
     window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        if (!soundFxModal.classList.contains('opacity-0')) {
+          toggleSoundFxPanel();
+        }
+      }
       if (e.key === 'Enter') {
         if (state.currentScreen === 1) {
           e.preventDefault();
@@ -668,7 +1026,6 @@
         const el = screens[num];
         if (parseInt(num) === screenNumber) {
           el.classList.remove('hidden');
-          // Pequeño timeout para permitir transición de opacidad
           setTimeout(() => {
             el.classList.remove('opacity-0', 'scale-95');
             el.classList.add('opacity-100', 'scale-100');
@@ -683,26 +1040,48 @@
 
       state.currentScreen = screenNumber;
 
+      // Sonido de armado láser al entrar a pantalla 3
+      if (screenNumber === 3) {
+        setTimeout(playLaserArmSound, 150);
+      }
+
+      // Animación de contadores al entrar a pantalla 4
+      if (screenNumber === 4) {
+        setTimeout(() => {
+          const avail = state.inventory.filter(t => t.status === 'Disponible').length;
+          const inUse = state.inventory.filter(t => t.status === 'En uso').length;
+          const maint = state.inventory.filter(t => t.status === 'Mantenimiento').length;
+          animateCounter('availableCount', avail);
+          animateCounter('inUseCount', inUse);
+          animateCounter('maintenanceCount', maint);
+        }, 150);
+      }
+
       // Foco según pantalla
       setTimeout(maintainFocus, 250);
     }
 
-    // Simulación Pantalla 1: Lector NFC
+    // Simulación Pantalla 1: Lector NFC con animación táctil y sonar
     function simulateNfcScan() {
       playNfcSound();
       nfcInput.value = '';
       
-      // Feedback visual momentáneo
-      const nfcCircle = document.querySelector('.nfc-glow');
-      if (nfcCircle) {
-        nfcCircle.classList.add('ring-4', 'ring-emerald-400');
-        setTimeout(() => {
-          nfcCircle.classList.remove('ring-4', 'ring-emerald-400');
-          goToScreen(2);
-        }, 300);
-      } else {
-        goToScreen(2);
+      const nfcCardBadge = document.getElementById('nfcCardBadge');
+      const nfcSonarWave = document.getElementById('nfcSonarWave');
+      
+      if (nfcCardBadge) {
+        nfcCardBadge.classList.add('animate-card-dip');
+        setTimeout(() => nfcCardBadge.classList.remove('animate-card-dip'), 500);
       }
+      if (nfcSonarWave) {
+        nfcSonarWave.classList.remove('animate-green-sonar');
+        void nfcSonarWave.offsetWidth;
+        nfcSonarWave.classList.add('animate-green-sonar');
+      }
+
+      setTimeout(() => {
+        goToScreen(2);
+      }, 380);
     }
 
     // Ir a Pantalla 3 desde Pantalla 2 (Retiro o Devolución)
@@ -723,10 +1102,25 @@
       goToScreen(1);
     }
 
-    // Simulación Pantalla 3: Lector Código de Barras
+    // Simulación Pantalla 3: Lector Código de Barras con Flash Verde y Sonido
     function simulateBarcodeScan() {
       playBarcodeSound();
       barcodeInput.value = '';
+
+      // Efecto visual: Flash verde en la mira óptica y en el haz láser
+      const laserBeam = document.getElementById('laserBeam');
+      const scannerViewport = document.getElementById('scannerViewport');
+      const barcodeLines = document.getElementById('barcodeLinesGroup');
+
+      if (laserBeam) laserBeam.classList.add('laser-green-flash');
+      if (scannerViewport) scannerViewport.classList.add('border-emerald-400', 'ring-4', 'ring-emerald-400/30');
+      if (barcodeLines) barcodeLines.classList.add('text-emerald-500', 'opacity-100');
+
+      setTimeout(() => {
+        if (laserBeam) laserBeam.classList.remove('laser-green-flash');
+        if (scannerViewport) scannerViewport.classList.remove('border-emerald-400', 'ring-4', 'ring-emerald-400/30');
+        if (barcodeLines) barcodeLines.classList.remove('text-emerald-500', 'opacity-100');
+      }, 420);
 
       // Seleccionar una herramienta al azar para demostrar dinamismo
       const randomTool = state.mockTools[Math.floor(Math.random() * state.mockTools.length)];
@@ -740,8 +1134,10 @@
         successTitle.textContent = 'Devolución registrada exitosamente';
       }
 
-      // Mostrar modal de confirmación
-      showSuccessAlert();
+      // Mostrar modal de confirmación tras el flash
+      setTimeout(() => {
+        showSuccessAlert();
+      }, 220);
     }
 
     function showSuccessAlert() {
@@ -753,10 +1149,20 @@
       modalBox.classList.remove('scale-90');
       modalBox.classList.add('scale-100');
 
+      // Reiniciar animación del checkmark SVG
+      const modalCheckPath = document.getElementById('modalCheckPath');
+      if (modalCheckPath) {
+        modalCheckPath.classList.remove('checkmark-path');
+        void modalCheckPath.offsetWidth;
+        modalCheckPath.classList.add('checkmark-path');
+      }
+
+      // Acorde triunfal de confirmación de operación
+      playSuccessChime();
+
       // Animación de la barra de progreso de 3 segundos
       countdownBar.style.width = '100%';
-      // Forzar reflow para reiniciar transición
-      void countdownBar.offsetWidth;
+      void countdownBar.offsetWidth; // Reflow
       countdownBar.style.width = '0%';
 
       // Cuenta regresiva numérica
