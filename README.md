@@ -1,56 +1,49 @@
-# L.O.T.U.S. SOLUTIONS - Suite Industrial (Kiosk & Admin Dashboard)
+# L.O.T.U.S. SOLUTIONS - Terminal de Pañol Industrial (SPA)
 
-Plataforma frontend SPA para la gestión, supervisión y control de pañol industrial en fábricas y talleres metalúrgicos. Desarrollada con **HTML5, Tailwind CSS y JavaScript Vanilla**.
-
----
-
-## 📂 Módulos de la Solución
-
-### 1. `dashboard.html` — Panel de Administración (Supervisión y Control)
-Diseñado para jefes de planta, supervisores de pañol y personal de mantenimiento.
-
-* **Layout Clásico de Dashboard**:
-  - **Sidebar Lateral**: Navegación entre *Dashboard*, *Historial de Operaciones*, *Alertas*, *Inventario* y *Personal*, con enlace directo al Kiosk.
-  - **Barra Superior**: Buscador global rápido con atajo <kbd>Ctrl+K</kbd>, indicador de turno fabril, campanita de notificaciones con badge de alertas activas y perfil de usuario.
-* **Historial de Operaciones (Core)**:
-  - **Data Table** moderna con ordenamiento e interactividad.
-  - **Filtros Dinámicos en Tiempo Real**: Búsqueda por operario, ítem o ID; filtro por tipo de acción (*Retiro*, *Devolución*, *Reporte de Falla*); filtro por fecha (*Hoy*, *Ayer*, *Semana*); y filtro por estado (*Completado*, *Pendiente*).
-  - **Paginación** configurable y botón de **Exportación a CSV**.
-  - Modal para registro de nueva operación manual y visor de fichas técnicas.
-* **Centro de Alertas en Tiempo Real (Core)**:
-  - Tarjetas con niveles de severidad: **Urgente / Fallas** (Rojo), **Advertencias / Mantenimiento** (Amarillo/Naranja) e **Informativas**.
-  - Tarjetas precargadas con casos reales de fábrica metalúrgica (Torno paralelo MAQ-001, stock crítico de discos de corte, pico térmico CNC Haas, torquímetro vencido).
-  - **Interacción Multicanal**: Botón *"Enviar Aviso (WhatsApp)"* que conmuta al estado *"Aviso Enviado ✔️"* y actualiza el contador de alertas en tiempo real.
-* **Inventario & Padrón de Operarios**: Vistas complementarias con stock, códigos de máquina, habilitación de tarjetas NFC y herramientas en custodia.
+Sistema de terminal de autoservicio para control y gestión de pañol industrial desarrollado con **HTML5, Tailwind CSS y JavaScript**.
 
 ---
 
-### 2. `index.html` — Terminal de Pañol Kiosk (Autoservicio)
-Diseñado para terminales táctiles y estaciones KDS de entrega rápida en el pañol.
-
-* **Pantalla 1 (Standby NFC)**: Espera de lectura de tarjeta NFC con pulsos concéntricos, logo corporativo oficial y atajo de teclado para emular lector RFID.
-* **Pantalla 2 (Dashboard Operario)**: Ficha de usuario ("Juan Pérez - Mantenimiento") con estado habilitado y dos botones de bloque sólido: *RETIRO DE HERRAMIENTA* y *DEVOLUCIÓN*.
-* **Pantalla 3 (Escáner Láser de Código de Barras)**: Visor de mira óptica con haz láser rojo animado, sonido acústico industrial generado por Web Audio API y alerta verde de confirmación con retorno automático en 3 segundos.
+## 🎨 Identidad Visual y Diseño (Light Mode Corporativo)
+- **Marca**: L.O.T.U.S. SOLUTIONS (*Logic Optimization & Technology Unified Solutions*).
+- **Paleta de Colores**:
+  - Color Primario Institucional: **Azul Marino Profundo** (`#1A2B42`).
+  - Fondo de Aplicación: **Gris Ultra Claro** (`#F8F9FA`).
+  - Acentos de Estado: Verde Esmeralda (`#10B981`) para condiciones habilitadas y confirmación de escaneo.
+- **Tipografías**: Google Fonts (*Montserrat* para titulares e identidad de marca, e *Inter* para datos de alta legibilidad).
+- **Estilo**: Kiosk KDS industrial, minimalista, limpio y moderno.
 
 ---
 
-## 🎨 Identidad Visual y Estilo Corporativo
+## 🚀 Flujo de Pantallas e Interacciones
 
-- **Estilo**: Corporativo, moderno, limpio (Light Mode).
-- **Color de Fondo**: Gris ultra claro (`#F8F9FA`).
-- **Color Principal**: Azul Marino Profundo (`#1A2B42`).
-- **Colores de Estado**:
-  - 🔴 **Rojo** (`#EF4444`): Urgente, fallas y paradas recomendadas.
-  - 🟡 **Amarillo / Naranja** (`#F59E0B`): Advertencias, mantenimientos preventivos y bajo stock.
-  - 🟢 **Verde** (`#10B981`): Operativo, habilitado y aviso enviado con éxito.
-- **Tipografías**: Google Fonts (*Inter* para lectura precisa de datos y *Montserrat* para encabezados institucionales).
+### 1. Pantalla 1: Standby (Esperando NFC)
+- Presenta el imagotipo oficial con anillos concéntricos y pulso armónico en Azul Marino.
+- Indicación clara: *"Por favor, apoye su tarjeta NFC en el lector para ingresar."*
+- **Mecánica Hardware**: Contiene un `input` oculto con foco permanente. Al aproximar una tarjeta NFC o presionar la tecla `Enter`, emite un chime armónico de confirmación y transiciona a la Pantalla 2.
+
+### 2. Pantalla 2: Dashboard del Operario
+- Ficha de perfil: **"Usuario: Juan Pérez | Sector: Mantenimiento | #OP-8492"**.
+- Indicador de estado con pulso activo: **"Estado: Habilitado"**.
+- Dos pulsadores principales en bloque sólido Azul Marino (`#1A2B42`) con iconografía vectorial:
+  - **RETIRO DE HERRAMIENTA** (Salida).
+  - **DEVOLUCIÓN** (Reintegro).
+- Botón secundario minimalista: **"Cerrar sesión"** (vuelve a Standby).
+
+### 3. Pantalla 3: Escaneo de Herramienta (Código de Barras)
+- Visor con mira óptica y animación de escaneo láser vertical rojo.
+- Texto: *"Escanee el código de barras de la herramienta"*.
+- Input invisible con foco continuo para captura de pistola lectora HID.
+- Al accionar el lector láser o pulsar `Enter`:
+  - Emite el clásico beep acústico industrial generado por Web Audio API.
+  - Despliega una alerta modal verde estilizada con el mensaje **"Retiro registrado exitosamente"** (o devolución) y detalle del ítem.
+  - Barra de progreso con temporizador que retorna automáticamente a la **Pantalla 1 tras 3 segundos**.
 
 ---
 
 ## 🖥️ Cómo ejecutar y probar
 
-No requiere instalación de servidores ni dependencias (`npm` o `node`).
-
-1. **Abrir el Panel de Administración**: Doble clic sobre [`dashboard.html`](dashboard.html) en tu navegador.
-2. **Abrir el Kiosk de Pañol**: Doble clic sobre [`index.html`](index.html).
-3. Ambos módulos cuentan con navegación cruzada en sus encabezados para alternar entre uno y otro de forma instantánea.
+1. Abra directamente el archivo `index.html` en cualquier navegador web moderno (Chrome, Edge, Firefox, Safari).
+2. Para probar sin hardware físico:
+   - Presione la tecla **`Enter`** en el teclado en cualquier momento para simular la lectura de la tarjeta NFC o el disparo de la pistola de código de barras.
+   - También puede hacer clic directamente en los botones de simulación o en los visores centrales.
