@@ -1,40 +1,35 @@
-# L.O.T.U.S. SOLUTIONS 
-Sistema de terminal de autoservicio para control y gestión de pañol 
+# Terminal de herramientas L.O.T.U.S.
 
+Guía rápida para el equipo de Falmet y pañol industrial.
 
+## ¿Para qué sirve?
 
-  Identidad Visual y Diseño (Light Mode Corporativo)
-- **Marca**: L.O.T.U.S. SOLUTIONS (*Logic Optimization & Technology Unified Solutions*).
-- **Paleta de Colores**:
-  - Color Primario Institucional: **Azul Marino Profundo** (`#1A2B42`).
-  - Fondo de Aplicación: **Gris Ultra Claro** (`#F8F9FA`).
-  - Acentos de Estado: Verde Esmeralda (`#10B981`) para condiciones habilitadas y confirmación de escaneo.
-- **Tipografías**: Google Fonts (*Montserrat* para titulares e identidad de marca, e *Inter* para datos de alta legibilidad).
-- **Estilo**: Kiosk KDS industrial, minimalista, limpio y moderno.
+Es una demostración de una pantalla (kiosk SPA) para retirar y devolver herramientas del pañol de **L.O.T.U.S. SOLUTIONS** (*Logic Optimization & Technology Unified Solutions*). Permite recorrer el flujo y consultar una lista de herramientas de ejemplo.
 
+Los datos que aparecen son ficticios. La página no registra movimientos reales, no se conecta a una base de datos y no usa APIs públicas.
 
- Flujo de Pantallas e Interacciones
+---
 
-### 1. Pantalla 1: Standby (Esperando NFC)
-- Presenta el imagotipo oficial con anillos concéntricos y pulso armónico en Azul Marino.
-- Indicación clara: *"Por favor, apoye su tarjeta NFC en el lector para ingresar."*
-- **Mecánica Hardware**: Contiene un `input` oculto con foco permanente. Al aproximar una tarjeta NFC o presionar la tecla `Enter`, emite un chime armónico de confirmación y transiciona a la Pantalla 2.
+## 🎨 Identidad Visual y Diseño
+- **Colores**: Azul Marino Profundo (`#1A2B42`), Gris Ultra Claro (`#F8F9FA`) y acentos en Verde Esmeralda (`#10B981`).
+- **Modo Claro / Modo Oscuro**: Alternable con el botón del encabezado y guardado en `localStorage`.
+- **Efectos de Sonido**: 7 efectos sintetizados en tiempo real mediante **Web Audio API** (NFC, pistola láser, acorde de éxito, clic táctil, switch mecánico y alarma de error), con panel interactivo de pruebas en el encabezado.
 
-### 2. Pantalla 2: Dashboard del Operario
-- Ficha de perfil: **"Usuario: Juan Pérez | Sector: Mantenimiento | #OP-8492"**.
-- Indicador de estado con pulso activo: **"Estado: Habilitado"**.
-- Dos pulsadores principales en bloque sólido Azul Marino (`#1A2B42`) con iconografía vectorial:
-  - **RETIRO DE HERRAMIENTA** (Salida).
-  - **DEVOLUCIÓN** (Reintegro).
-- Botón secundario minimalista: **"Cerrar sesión"** (vuelve a Standby).
+---
 
-### 3. Pantalla 3: Escaneo de Herramienta (Código de Barras)
-- Visor con mira óptica y animación de escaneo láser vertical rojo.
-- Texto: *"Escanee el código de barras de la herramienta"*.
-- Input invisible con foco continuo para captura de pistola lectora HID.
-- Al accionar el lector láser o pulsar `Enter`:
-  - Emite el clásico beep acústico industrial generado por Web Audio API.
-  - Despliega una alerta modal verde estilizada con el mensaje **"Retiro registrado exitosamente"** (o devolución) y detalle del ítem.
-  - Barra de progreso con temporizador que retorna automáticamente a la **Pantalla 1 tras 3 segundos**.
+## 🚀 Flujo de Pantallas
 
+1. **Pantalla 1: Standby (Esperando NFC)**: Apoyo de tarjeta NFC con pulsos concéntricos, onda sonar verde y respuesta táctil.
+2. **Pantalla 2: Dashboard del Operario**: Ficha de usuario habilitada, acciones principales (*Retiro de herramienta* y *Devolución*) con efecto shimmer reflectante y botón para ver estado de herramientas.
+3. **Pantalla 3: Escaneo de Código de Barras**: Visor de mira óptica HUD con línea láser, flash verde de lectura y alerta de éxito con checkmark animado retornando en 3 segundos.
+4. **Pantalla 4: Estado de herramientas (Inventario)**: Consulta rápida de disponibilidad, ubicación y buscador con contadores progresivos.
 
+---
+
+## 🖥️ Cómo probarla
+
+1. Abra `index.html` en cualquier navegador web moderno (Chrome, Edge, Firefox, Safari).
+2. Presione `Enter` o el botón de simulación para avanzar desde la pantalla de ingreso.
+3. Elija retiro o devolución y presione `Enter` para disparar la lectura del código.
+4. Use «Estado de herramientas» para consultar el inventario de ejemplo y filtrar por estado o nombre.
+5. Use el botón «Sonidos» del encabezado para probar individualmente los sintetizadores de audio.
