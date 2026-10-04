@@ -10,7 +10,7 @@ Guía rápida para el equipo de Falmet y pañol industrial.
 
 Es una demostración de una pantalla para retirar y devolver herramientas del pañol de **L.O.T.U.S. SOLUTIONS** (*Logic Optimization & Technology Unified Solutions*). Permite recorrer el flujo y consultar una lista de herramientas de ejemplo.
 
-Los datos que aparecen son ficticios. La página no registra movimientos reales, no se conecta a una base de datos y no usa APIs públicas.
+Los datos que aparecen son ficticios. La página no registra movimientos reales ni se conecta a una base de datos. El asistente de ayuda sí envía las consultas a la API de Anthropic.
 
 ---
 
