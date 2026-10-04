@@ -698,6 +698,42 @@
     </div>
   </footer>
 
+  <div class="fixed bottom-4 right-4 z-40 flex flex-col items-end gap-3">
+    <section id="chatPanel" class="hidden h-[min(32rem,calc(100vh-7rem))] w-80 max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl sm:w-96" role="dialog" aria-label="Asistente de L.O.T.U.S.">
+      <div class="flex items-center justify-between bg-brand-navy px-4 py-3 text-white">
+        <div>
+          <h2 class="text-sm font-bold">Asistente L.O.T.U.S.</h2>
+          <p class="text-xs text-white/75">Ayuda para usar el sistema · no envíes datos personales</p>
+        </div>
+        <button id="closeChatBtn" type="button" class="rounded-lg p-2 text-white/80 transition hover:bg-white/10 hover:text-white" aria-label="Cerrar chat">
+          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+      <div id="chatMessages" class="flex-1 space-y-3 overflow-y-auto bg-slate-50 p-4" role="log" aria-live="polite" aria-relevant="additions text">
+        <p class="max-w-[85%] rounded-2xl rounded-tl-sm border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
+          ¡Hola! Puedo ayudarte con el uso del sistema L.O.T.U.S.
+        </p>
+      </div>
+      <form id="chatForm" class="flex items-end gap-2 border-t border-slate-200 bg-white p-3">
+        <label class="sr-only" for="chatInput">Escribí tu consulta</label>
+        <textarea id="chatInput" rows="1" maxlength="1000" placeholder="Escribí tu consulta..." class="max-h-28 min-h-10 flex-1 resize-y rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-800 outline-none focus:border-brand-navy focus:ring-2 focus:ring-brand-navy/15" required></textarea>
+        <button id="sendChatBtn" type="submit" class="rounded-xl bg-brand-navy px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-navy-light disabled:cursor-not-allowed disabled:opacity-50" aria-label="Enviar consulta">
+          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14m-7-7l7 7-7 7"/>
+          </svg>
+        </button>
+      </form>
+    </section>
+    <button id="toggleChatBtn" type="button" class="inline-flex items-center gap-2 rounded-full bg-brand-navy px-4 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-brand-navy-light focus:outline-none focus:ring-2 focus:ring-brand-navy focus:ring-offset-2" aria-expanded="false" aria-controls="chatPanel">
+      <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h8m-8 4h5m-9 6l1.8-3.6A8 8 0 1120 12a8 8 0 01-8 8H4z"/>
+      </svg>
+      <span>Ayuda</span>
+    </button>
+  </div>
+
   <!-- ========================================== -->
   <!-- LÓGICA DE CONTROL EN JAVASCRIPT            -->
   <!-- ========================================== -->
@@ -755,8 +791,89 @@
     const introScreen = document.getElementById('introScreen');
     const introVideo = document.getElementById('introVideo');
     const skipIntroBtn = document.getElementById('skipIntroBtn');
+    const chatPanel = document.getElementById('chatPanel');
+    const toggleChatBtn = document.getElementById('toggleChatBtn');
+    const closeChatBtn = document.getElementById('closeChatBtn');
+    const chatMessages = document.getElementById('chatMessages');
+    const chatForm = document.getElementById('chatForm');
+    const chatInput = document.getElementById('chatInput');
+    const sendChatBtn = document.getElementById('sendChatBtn');
 
     let introFinished = false;
+    const chatHistory = [];
+    const maxChatHistory = 10;
+
+    function appendChatMessage(content, role) {
+      const message = document.createElement('p');
+      message.className = role === 'user'
+        ? 'ml-auto max-w-[85%] whitespace-pre-wrap break-words rounded-2xl rounded-tr-sm bg-brand-navy px-3 py-2 text-sm text-white'
+        : 'max-w-[85%] whitespace-pre-wrap break-words rounded-2xl rounded-tl-sm border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700';
+      message.textContent = content;
+      chatMessages.appendChild(message);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+      return message;
+    }
+
+    function setChatOpen(isOpen) {
+      chatPanel.classList.toggle('hidden', !isOpen);
+      chatPanel.classList.toggle('flex', isOpen);
+      toggleChatBtn.setAttribute('aria-expanded', String(isOpen));
+      if (isOpen) chatInput.focus();
+    }
+
+    async function sendChatMessage(event) {
+      event.preventDefault();
+      const message = chatInput.value.trim();
+      if (!message || sendChatBtn.disabled) return;
+
+      appendChatMessage(message, 'user');
+      chatHistory.push({ role: 'user', content: message });
+      chatInput.value = '';
+      sendChatBtn.disabled = true;
+      const loadingMessage = appendChatMessage('Estoy pensando...', 'assistant');
+
+      try {
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message, history: chatHistory.slice(-maxChatHistory - 1, -1) }),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || 'No se pudo obtener una respuesta.');
+        }
+        if (typeof data.reply !== 'string' || !data.reply.trim()) {
+          throw new Error('El asistente devolvió una respuesta vacía.');
+        }
+
+        chatHistory.push({ role: 'assistant', content: data.reply });
+        if (chatHistory.length > maxChatHistory) {
+          chatHistory.splice(0, chatHistory.length - maxChatHistory);
+        }
+        loadingMessage.textContent = data.reply;
+      } catch (error) {
+        chatHistory.pop();
+        loadingMessage.textContent = error instanceof TypeError
+          ? 'No se pudo conectar con el asistente. Probá de nuevo más tarde.'
+          : error.message;
+      } finally {
+        sendChatBtn.disabled = false;
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+        chatInput.focus();
+      }
+    }
+
+    toggleChatBtn.addEventListener('click', () => {
+      setChatOpen(chatPanel.classList.contains('hidden'));
+    });
+    closeChatBtn.addEventListener('click', () => setChatOpen(false));
+    chatForm.addEventListener('submit', sendChatMessage);
+    chatInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        chatForm.requestSubmit();
+      }
+    });
 
     function finishIntro() {
       if (introFinished) return;
@@ -1036,7 +1153,9 @@
         }
       }
       if (e.key === 'Enter') {
-        if (state.currentScreen === 1) {
+        if (chatPanel.contains(e.target)) {
+          return;
+        } else if (state.currentScreen === 1) {
           e.preventDefault();
           simulateNfcScan();
         } else if (state.currentScreen === 3 && !successModal.classList.contains('opacity-100')) {

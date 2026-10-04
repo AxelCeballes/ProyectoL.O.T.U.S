@@ -38,6 +38,12 @@ Los datos que aparecen son ficticios. La página no registra movimientos reales,
 4. Use «Estado de herramientas» para consultar el inventario de ejemplo y filtrar por estado o nombre.
 5. Use el botón «Sonidos» del encabezado para probar individualmente los sintetizadores de audio.
 
+## Asistente de ayuda
+
+El chat de ayuda usa una función de Vercel (`api/chat.js`) que consulta la API de Anthropic. Para habilitarlo, configure `ANTHROPIC_API_KEY` como variable de entorno secreta en la configuración del proyecto de Vercel y vuelva a desplegar. Nunca coloque la clave en `index.html` ni la suba al repositorio.
+
+Los mensajes enviados al chat se procesan mediante Anthropic. No envíe datos personales ni información confidencial. El asistente no tiene acceso a datos reales: esta aplicación es una demo y muestra información ficticia.
+
 ## PARTICIPANTES
 
 -AXEL CEBALLES
