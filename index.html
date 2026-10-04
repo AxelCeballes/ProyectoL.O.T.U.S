@@ -140,9 +140,22 @@
     .animate-reticle {
       animation: reticlePulse 2s ease-in-out infinite;
     }
+    #introScreen {
+      transition: opacity 0.5s ease;
+    }
   </style>
 </head>
 <body class="h-full flex flex-col font-sans bg-brand-bg text-brand-navy antialiased overflow-hidden selection:bg-brand-navy selection:text-white">
+
+  <div id="introScreen" class="fixed inset-0 z-50 flex items-center justify-center bg-brand-navy" role="region" aria-label="Introducción de L.O.T.U.S.">
+    <video id="introVideo" class="h-full w-full object-contain" autoplay muted playsinline preload="auto" aria-label="Video de introducción de L.O.T.U.S.">
+      <source src="assets/lotus_solutions_florecimiento_lento.mp4" type="video/mp4">
+      Tu navegador no puede reproducir este video.
+    </video>
+    <button id="skipIntroBtn" type="button" class="absolute bottom-6 right-6 rounded-lg bg-black/60 px-4 py-2 text-sm font-semibold text-white transition hover:bg-black/80 focus:outline-none focus:ring-2 focus:ring-white">
+      Omitir introducción
+    </button>
+  </div>
 
   <!-- ========================================== -->
   <!-- BARRA DE ENCABEZADO SUPERIOR (Kiosk Header) -->
@@ -739,6 +752,21 @@
     const statusFilter = document.getElementById('statusFilter');
     const toolStatusRows = document.getElementById('toolStatusRows');
     const emptyToolResults = document.getElementById('emptyToolResults');
+    const introScreen = document.getElementById('introScreen');
+    const introVideo = document.getElementById('introVideo');
+    const skipIntroBtn = document.getElementById('skipIntroBtn');
+
+    let introFinished = false;
+
+    function finishIntro() {
+      if (introFinished) return;
+      introFinished = true;
+      introVideo.pause();
+      introScreen.classList.add('opacity-0');
+      window.setTimeout(() => {
+        introScreen.classList.add('hidden');
+      }, 500);
+    }
 
     function renderToolStatus() {
       const query = toolSearch.value.trim().toLocaleLowerCase('es');
@@ -1202,6 +1230,9 @@
 
     // Inicializar al cargar
     window.addEventListener('DOMContentLoaded', () => {
+      skipIntroBtn.addEventListener('click', finishIntro);
+      introVideo.addEventListener('ended', finishIntro);
+      introVideo.addEventListener('error', finishIntro);
       maintainFocus();
     });
   </script>
