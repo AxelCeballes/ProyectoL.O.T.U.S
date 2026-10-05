@@ -242,6 +242,50 @@ async function suiteCompartida() {
     `status=${roto.statusCode} body=${JSON.stringify(roto.body)}`
   );
 
+  // Este bug se vio en produccion: al preguntar "cuantas amoladoras hay" el
+  // modelo devolvia la amoladora en "agregar" y cada pregunta duplicaba una
+  // herramienta en el inventario del operario.
+  stubFetch(async () =>
+    okResponse(
+      JSON.stringify({
+        reply: 'Hay 1 amoladora.',
+        agregar: [
+          { name: 'Amoladora Angular 4 1/2" DeWalt', category: 'Eléctricas', status: 'maintenance' },
+          { name: 'amoladora angular 4 1/2 dewalt', category: 'Eléctricas', status: 'available' },
+          { name: 'Pinza Nueva', category: 'Manuales', status: 'available' },
+        ],
+      })
+    )
+  );
+  const dupRes = await call({
+    body: invBody([{ name: 'Amoladora Angular 4 1/2" DeWalt', category: 'Eléctricas', status: 'maintenance' }]),
+  });
+  check(
+    'no agrega lo que ya esta en el inventario',
+    dupRes.body.agregar?.length === 1 && dupRes.body.agregar[0].name === 'Pinza Nueva',
+    JSON.stringify(dupRes.body.agregar)
+  );
+  check(
+    'compara nombres sin tildes ni mayusculas',
+    !dupRes.body.agregar?.some((t) => /amoladora/i.test(t.name)),
+    JSON.stringify(dupRes.body.agregar?.map((t) => t.name))
+  );
+
+  // Dos altas iguales en la misma respuesta tampoco pueden colarse.
+  stubFetch(async () =>
+    okResponse(
+      JSON.stringify({
+        reply: 'Listo.',
+        agregar: [
+          { name: 'Disco 7"', category: 'Consumibles', status: 'available' },
+          { name: 'disco 7', category: 'Consumibles', status: 'available' },
+        ],
+      })
+    )
+  );
+  const intraRes = await call({ body: { message: 'agrega un disco' } });
+  check('no deja dos altas iguales en la misma respuesta', intraRes.body.agregar?.length === 1, JSON.stringify(intraRes.body.agregar));
+
   section(`${providerName}: 1. Método y configuración`);
   stubFetch(okResponse);
   check('GET devuelve 405', (await call({ method: 'GET' })).statusCode === 405);

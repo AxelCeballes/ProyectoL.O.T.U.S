@@ -137,14 +137,38 @@ function cleanInventory(raw) {
   return `\n\nInventario actual (${lines.length} herramienta(s)):\n${lines.join("\n")}`;
 }
 
-function sanitizeTools(raw) {
+// Una consulta no puede crear nada. El modelo a veces devuelve en "agregar" la
+// herramienta que acaba de describir ("hay una amoladora" -> agrega amoladora),
+// y sin este filtro cada pregunta duplicaba herramientas en el inventario del
+// operario. Se compara sin tildes, mayusculas ni signos, porque el modelo escribe
+// el mismo nombre de varias formas.
+function nameKey(value) {
+  return cleanToolName(value)
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function sanitizeTools(raw, inventario = []) {
   if (!Array.isArray(raw)) return [];
 
+  const yaExisten = new Set();
+  for (const item of Array.isArray(inventario) ? inventario : []) {
+    const key = nameKey(item?.name);
+    if (key) yaExisten.add(key);
+  }
+
   const out = [];
+  const agregadas = new Set();
   for (const item of raw.slice(0, MAX_ALTAS)) {
     if (!item || typeof item !== "object") continue;
     const name = cleanToolName(item.name);
     if (!name) continue;
+    const key = nameKey(name);
+    if (yaExisten.has(key) || agregadas.has(key)) continue;
+    agregadas.add(key);
     out.push({
       name,
       category: cleanToolName(item.category).slice(0, 80) || "Sin categoría",
@@ -181,14 +205,14 @@ function extractJson(text) {
   }
 }
 
-function parseReply(text) {
+function parseReply(text, inventario = []) {
   const parsed = extractJson(text);
   if (!parsed || typeof parsed !== "object") {
     return { reply: String(text ?? "").trim(), agregar: [] };
   }
 
   const reply = typeof parsed.reply === "string" ? parsed.reply.trim() : "";
-  return { reply, agregar: sanitizeTools(parsed.agregar) };
+  return { reply, agregar: sanitizeTools(parsed.agregar, inventario) };
 }
 
 const SYSTEM_PROMPT = `Sos el asistente de ayuda de L.O.T.U.S., el sistema de un pañol industrial.
@@ -494,7 +518,7 @@ module.exports = async function handler(req, res) {
 
     // Se le pidió JSON. Si no viene, se muestra el texto crudo como respuesta: es
     // preferible una respuesta sin altas a dejar al operario sin nada.
-    const parsed = parseReply(rawText);
+    const parsed = parseReply(rawText, inventario);
     if (!parsed.reply.trim()) {
       return sendJson(res, 502, { error: "El asistente no devolvió una respuesta. Probá de nuevo." });
     }
