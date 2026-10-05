@@ -2,7 +2,8 @@
    Si querés igualar la paleta de tu web, cambiá solo estas variables. */
 
 .lap,
-.lap-launcher {
+.lap-launcher,
+.lap-auth {
   --lap-bg: #07050f;
   --lap-surface: rgba(20, 15, 36, 0.85);
   --lap-line: rgba(168, 85, 247, 0.4);
@@ -41,7 +42,43 @@
 .lap-launcher:hover { color: #253d5c; border-color: #cbd5e1; background: #f8fafc; }
 .lap-launcher:focus-visible,
 .lap button:focus-visible,
+.lap-auth button:focus-visible,
+.lap-auth input:focus-visible,
 .lap summary:focus-visible { outline: 2px solid var(--lap-cyan); outline-offset: 2px; }
+
+/* ---------- Acceso al panel ---------- */
+.lap-auth {
+  width: min(420px, calc(100% - 32px));
+  max-width: none;
+  padding: 0;
+  color: var(--lap-text);
+  background: var(--lap-bg);
+  border: 1px solid var(--lap-line);
+  border-radius: 14px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
+}
+.lap-auth::backdrop { background: rgba(4, 3, 10, 0.76); backdrop-filter: blur(6px); }
+.lap-auth__form { display: flex; flex-direction: column; gap: 12px; padding: 24px; }
+.lap-auth__form h2 { margin: 0; color: var(--lap-cyan); font-size: 20px; }
+.lap-auth__form p { margin: 0; color: var(--lap-muted); font-size: 14px; }
+.lap-auth__form label { color: var(--lap-muted); font-size: 13px; }
+.lap-auth__form input {
+  width: 100%;
+  padding: 10px 12px;
+  color: var(--lap-text);
+  background: rgba(24, 18, 40, 0.8);
+  border: 1px solid var(--lap-line);
+  border-radius: 8px;
+  font: inherit;
+  color-scheme: dark;
+}
+.lap-auth__form input:focus { border-color: var(--lap-cyan); outline: none; box-shadow: 0 0 10px rgba(0, 240, 255, 0.3); }
+.lap-auth__form .lap-auth__error { color: #ff8a8a; }
+.lap-auth__error[hidden] { display: none; }
+.lap-auth__actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 4px; }
+.lap-auth__actions button { padding: 9px 14px; border: 1px solid var(--lap-line); border-radius: 8px; font: inherit; cursor: pointer; }
+.lap-auth__cancel { color: var(--lap-muted); background: transparent; }
+.lap-auth__submit { color: var(--lap-bg); background: var(--lap-cyan); font-weight: 700 !important; }
 
 /* ---------- Capa principal ---------- */
 .lap {

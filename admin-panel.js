@@ -18,6 +18,8 @@ const STATUS = {
   maintenance: { label: "En mantenimiento", cls: "warn" },
 };
 
+const ADMIN_PASSWORD = "falmet";
+
 const esc = (value) =>
   String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
@@ -50,6 +52,7 @@ export function mountAdminPanel({ store } = {}) {
     error: "",
     flashId: null,
   };
+  let isAuthenticated = false;
 
   // ---------- DOM base ----------
   const launcher = document.createElement("button");
@@ -63,6 +66,22 @@ export function mountAdminPanel({ store } = {}) {
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12l2 2 4-4"/>
     </svg>
     <span>Admin</span>`;
+
+  const authDialog = document.createElement("dialog");
+  authDialog.className = "lap-auth";
+  authDialog.setAttribute("aria-labelledby", "lap-auth-title");
+  authDialog.innerHTML = `
+    <form class="lap-auth__form">
+      <h2 id="lap-auth-title">Acceso de administrador</h2>
+      <p>Ingresá la contraseña para abrir el panel.</p>
+      <label for="lap-auth-password">Contraseña</label>
+      <input id="lap-auth-password" name="password" type="password" autocomplete="current-password" required>
+      <p class="lap-auth__error" role="alert" hidden>La contraseña es incorrecta.</p>
+      <div class="lap-auth__actions">
+        <button type="button" class="lap-auth__cancel">Cancelar</button>
+        <button type="submit" class="lap-auth__submit">Ingresar</button>
+      </div>
+    </form>`;
 
   const root = document.createElement("div");
   root.className = "lap";
@@ -88,8 +107,12 @@ export function mountAdminPanel({ store } = {}) {
   const headerControls = document.querySelector("header > div:last-child");
   if (!headerControls) throw new Error("No se encontró el encabezado para ubicar el acceso de administración.");
   headerControls.append(launcher);
+  document.body.append(authDialog);
   document.body.append(root);
 
+  const authForm = authDialog.querySelector(".lap-auth__form");
+  const authPassword = authDialog.querySelector("#lap-auth-password");
+  const authError = authDialog.querySelector(".lap-auth__error");
   const titleEl = root.querySelector(".lap__title");
   const contentEl = root.querySelector(".lap__content");
   const drawerEl = root.querySelector(".lap__drawer");
@@ -264,6 +287,13 @@ export function mountAdminPanel({ store } = {}) {
 
   // ---------- Abrir / cerrar ----------
   function open() {
+    if (!isAuthenticated) {
+      authError.hidden = true;
+      authPassword.value = "";
+      authDialog.showModal();
+      authPassword.focus();
+      return;
+    }
     root.hidden = false;
     document.body.style.overflow = "hidden";
     refresh().then(() => root.querySelector(".lap__nav.is-active")?.focus());
@@ -272,11 +302,30 @@ export function mountAdminPanel({ store } = {}) {
   function close() {
     root.hidden = true;
     state.selectedId = null;
+    isAuthenticated = false;
     document.body.style.overflow = "";
     launcher.focus();
   }
 
   launcher.addEventListener("click", open);
+  authDialog.querySelector(".lap-auth__cancel").addEventListener("click", () => authDialog.close());
+  authDialog.addEventListener("close", () => {
+    authPassword.value = "";
+    authError.hidden = true;
+    if (root.hidden) launcher.focus();
+  });
+  authForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    if (authPassword.value !== ADMIN_PASSWORD) {
+      authPassword.value = "";
+      authError.hidden = false;
+      authPassword.focus();
+      return;
+    }
+    isAuthenticated = true;
+    authDialog.close();
+    open();
+  });
 
   // ---------- Eventos ----------
   root.addEventListener("click", (e) => {
