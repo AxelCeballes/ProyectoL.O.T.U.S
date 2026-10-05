@@ -135,6 +135,15 @@
    que realmente usan clases utilitarias para no inflar el bundle. */
 @source "../index.html";
 
+/* La detección automática de Tailwind barre todo lo que no esté en .gitignore,
+   y por eso convertía cualquier palabra suelta del código del servidor y de las
+   pruebas en una clase. La primera fue `contents`, que es el nombre que Gemini
+   exige en su campo de petición: aparecía .contents{display:contents} en el
+   bundle sin que nadie la usara en el sitio. Excluir esos dos directorios
+   evita toda esa clase de ruido. */
+@source not "../api";
+@source not "../scripts";
+
 body.dark-mode #introScreen.bg-white {
   background-color: #fff !important;
 }

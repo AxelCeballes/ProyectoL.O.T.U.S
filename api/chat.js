@@ -1,26 +1,37 @@
 // api/chat.js — Función serverless de Vercel para el asistente de ayuda del kiosco.
 //
-// Variables de entorno (Settings > Environment Variables en Vercel):
-//   ANTHROPIC_API_KEY  (obligatoria, secreta)
-//   ANTHROPIC_MODEL    (opcional) — por defecto claude-sonnet-5-5
-//   ANTHROPIC_EFFORT   (opcional) — low | medium | high. Por defecto "low".
-//   CHAT_RATE_LIMIT    (opcional) — consultas por minuto y por IP. Por defecto 12.
+// El canal de ayuda es un LLM genérico: la implementación depende del proveedor,
+// que se elige con CHAT_PROVIDER (por defecto "gemini", porque el free tier de
+// Google no cobra y no pide tarjeta; Anthropic queda disponible si algún día
+// hay una clave).
+//
+// CHAT_PROVIDER=gemini     (por defecto)
+//   GEMINI_API_KEY   (obligatoria, secreta). Se consigue gratis en AI Studio.
+//   GEMINI_MODEL     (opcional) — por defecto gemini-2.5-flash.
+//
+// CHAT_PROVIDER=anthropic
+//   ANTHROPIC_API_KEY (obligatoria, secreta)
+//   ANTHROPIC_MODEL   (opcional) — por defecto claude-sonnet-5-5
+//   ANTHROPIC_EFFORT  (opcional) — low | medium | high. Por defecto "low".
+//
+// CHAT_RATE_LIMIT (opcional) — consultas por minuto y por IP. Por defecto 12.
 
-const API_URL = "https://api.anthropic.com/v1/messages";
-const API_VERSION = "2023-06-01";
+const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models";
+const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
+const ANTHROPIC_VERSION = "2023-06-01";
 const TIMEOUT_MS = 20000;
 
 // Se leen por request, no al cargar el módulo: en serverless la instancia se
 // reutiliza entre invocaciones y así el comportamiento queda determinado por
 // el entorno en el momento de la llamada.
-const model = () => process.env.ANTHROPIC_MODEL || "claude-sonnet-5-5";
-const effort = () => process.env.ANTHROPIC_EFFORT || "low";
-const rateLimitPerMin = () => Number(process.env.CHAT_RATE_LIMIT) || 12;
+const provider = () => (process.env.CHAT_PROVIDER || "gemini").toLowerCase();
+const rateLimitPerMin = () => {
+  const raw = Number(process.env.CHAT_RATE_LIMIT);
+  return Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : 12;
+};
 
 const MAX_MESSAGE_LENGTH = 1000;
 const MAX_HISTORY = 10;
-// Holgado a propósito: en Sonnet 5.5 los tokens de thinking cuentan para
-// max_tokens. Con 500 la respuesta visible podía quedar truncada.
 const MAX_TOKENS = 1024;
 
 // ------------------------------------------------------------------
@@ -75,7 +86,7 @@ const SCREEN_NAMES = {
 
 const OPERATIONS = {
   RETIRO: "Retiro de Herramienta",
-  DEVOLUCIÓN: "Devolución de Herramienta",
+  "DEVOLUCIÓN": "Devolución de Herramienta",
 };
 
 function cleanContext(raw) {
@@ -98,15 +109,15 @@ Ayudás al operario a entender el flujo, dónde está cada opción en pantalla y
 
 Respondé siempre en español rioplatense, con voseo, de forma breve y clara: máximo 4 o 5 oraciones.
 
-Importante sobre los datos: esta aplicación es una demostración. El inventario y las reparaciones son datos de ejemplo guardados en el navegador, no hay base de datos ni servidor de inventario. No affirmes que podés consultar movimientos, personal o herramientas reales, y no inventes datos que no estén en pantalla. Si te piden un dato real, decí dónde se ve en el kiosco.
+Importante sobre los datos: esta aplicación es una demostración. El inventario y las reparaciones son datos de ejemplo guardados en el navegador, no hay base de datos ni servidor de inventario. No afirmes que podés consultar movimientos, personal o herramientas reales, y no inventes datos que no estén en pantalla. Si te piden un dato real, decí dónde se ve en el kiosco.
 
 Si la consulta no tiene relación con L.O.T.U.S., decí amablemente que solo podés ayudar con el sistema.
 No inventes funciones que no conozcas.`;
 
 // ------------------------------------------------------------------
 // Validación del historial. Además de filtrar, garantiza que la primera
-// mensagem sea del usuario: la API de Anthropic rechaza con 400 un
-// historial que empiece en assistant, y el endpoint es público.
+// mensaje sea del usuario: las dos APIs rechazan con 400 un historial que
+// empiece en assistant/model, y el endpoint es público.
 // ------------------------------------------------------------------
 function cleanHistory(history) {
   if (!Array.isArray(history)) return [];
@@ -129,10 +140,139 @@ function cleanHistory(history) {
   return cleaned;
 }
 
+// ------------------------------------------------------------------
+// Construcción de la petición y lectura de la respuesta, por proveedor.
+// Se mantienen separadas del resto del handler porque son lo único que
+// cambia entre uno y otro: la validación, el rate limit y los errores son
+// comunes.
+// ------------------------------------------------------------------
+function geminiRequest(apiKey, systemText, messages) {
+  // El modelo por defecto se Pride de medirlo, no de leer el quickstart:
+  //   - gemini-2.5-flash aparece como ejemplo en la documentación y Google ya lo
+  //     rechaza con 404 "no longer available to new users".
+  //   - gemini-3.6-flash y 3.8-flash devuelven 503 "high demand" en el free tier.
+  //   - 3.5-flash-lite respondió en 0.8-1.5 s de forma sostenida.
+  // Se puede cambiar con GEMINI_MODEL; los errores de Google dicen cuál usar.
+  const model = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
+  return {
+    model,
+    url: `${GEMINI_URL}/${model}:generateContent`,
+    init: {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": apiKey,
+      },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: systemText }] },
+        // Gemini usa "model" donde Anthropic usa "assistant".
+        contents: messages.map((m) => ({
+          role: m.role === "assistant" ? "model" : "user",
+          parts: [{ text: m.content }],
+        })),
+        // No se manda thinkingConfig a propósito. Se probó contra la API real:
+        // thinkingLevel "off" da 400 en los flash-lite, y thinkingBudget 0 da
+        // 400 en dos de cada tres. Los flash-lite no razonan aunque no se pida
+        // nada, así que mandarlo solo agrega una forma de que el canal se rompa.
+        // Si se cambia a un modelo que razona por defecto, puede pasar que la
+        // respuesta visible se corte; el log deja ver el finishReason.
+        generationConfig: { maxOutputTokens: MAX_TOKENS },
+      }),
+    },
+  };
+}
+
+function geminiReply(data) {
+  const candidate = Array.isArray(data.candidates) ? data.candidates[0] : null;
+  if (!candidate) return { text: "", finishReason: data.promptFeedback?.blockReason || "sin candidatos" };
+
+  // Los bloques de razonamiento vienen en la misma lista de parts con
+  // thought:true. Sin este filtro el operario leería el razonamiento crudo.
+  const text = Array.isArray(candidate.content?.parts)
+    ? candidate.content.parts
+        .filter((p) => p && p.thought !== true && typeof p.text === "string")
+        .map((p) => p.text)
+        .join("")
+        .trim()
+    : "";
+
+  return { text, finishReason: candidate.finishReason || "desconocido" };
+}
+
+function anthropicRequest(apiKey, systemText, messages) {
+  const model = process.env.ANTHROPIC_MODEL || "claude-sonnet-5-5";
+  return {
+    model,
+    url: ANTHROPIC_URL,
+    init: {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": ANTHROPIC_VERSION,
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: MAX_TOKENS,
+        system: systemText,
+        messages,
+        thinking: { type: "between_tools" },
+        output_config: { effort: process.env.ANTHROPIC_EFFORT || "low" },
+      }),
+    },
+  };
+}
+
+function anthropicReply(data) {
+  const text = Array.isArray(data.content)
+    ? data.content
+        .filter((block) => block.type === "text" && typeof block.text === "string")
+        .map((block) => block.text)
+        .join("")
+        .trim()
+    : "";
+  return { text, finishReason: data.stop_reason || "desconocido" };
+}
+
+// Clave y constructor según el proveedor. Devolver null en la clave hace que el
+// handler responda 503 con un mensaje que nombra la variable que falta.
+function resolveProvider() {
+  const which = provider();
+  if (which === "anthropic") {
+    return {
+      name: "anthropic",
+      keyName: "ANTHROPIC_API_KEY",
+      apiKey: process.env.ANTHROPIC_API_KEY || null,
+      build: anthropicRequest,
+      parse: anthropicReply,
+    };
+  }
+  if (which === "gemini") {
+    return {
+      name: "gemini",
+      keyName: "GEMINI_API_KEY",
+      apiKey: process.env.GEMINI_API_KEY || null,
+      build: geminiRequest,
+      parse: geminiReply,
+    };
+  }
+  return { name: which, keyName: "CHAT_PROVIDER", apiKey: null, build: geminiRequest, parse: geminiReply };
+}
+
 function sendJson(res, status, payload, headers = {}) {
   res.setHeader("Cache-Control", "no-store");
   for (const [key, value] of Object.entries(headers)) res.setHeader(key, value);
   return res.status(status).json(payload);
+}
+
+// Google responde 400 con status INVALID_ARGUMENT y reason API_KEY_INVALID
+// cuando la clave no existe, en vez de 401 o 403. Sin esto, el error más
+// probable en producción (una clave mal pegada) se reportaría como una falla
+// transitoria y el Operario vería "no se pudo obtener una respuesta".
+const KEY_ERROR_PATTERN = /API_KEY_INVALID|PERMISSION_DENIED|API key not valid|API_KEY_UNSPECIFIED/i;
+
+function isKeyProblem(raw) {
+  return KEY_ERROR_PATTERN.test(raw);
 }
 
 module.exports = async function handler(req, res) {
@@ -140,11 +280,17 @@ module.exports = async function handler(req, res) {
     return sendJson(res, 405, { error: "Método no permitido" }, { Allow: "POST" });
   }
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    console.error("[chat] ANTHROPIC_API_KEY no está definida en el entorno del servidor.");
+  const target = resolveProvider();
+
+  if (target.name !== "gemini" && target.name !== "anthropic") {
+    console.error(`[chat] CHAT_PROVIDER="${target.name}" no es un proveedor conocido.`);
+    return sendJson(res, 500, { error: "El asistente no está configurado correctamente." });
+  }
+
+  if (!target.apiKey) {
+    console.error(`[chat] ${target.keyName} no está definida en el entorno del servidor.`);
     return sendJson(res, 503, {
-      error: "El asistente no está configurado. Revisá ANTHROPIC_API_KEY en Vercel.",
+      error: `El asistente no está configurado. Revisá ${target.keyName} en Vercel.`,
     });
   }
 
@@ -164,43 +310,34 @@ module.exports = async function handler(req, res) {
   }
 
   const screenContext = cleanContext(context);
+  const systemText = screenContext ? `${SYSTEM_PROMPT}\n\nContexto del kiosco ahora mismo:\n${screenContext}` : SYSTEM_PROMPT;
   const messages = [
     ...cleanHistory(history),
     { role: "user", content: message.trim().slice(0, MAX_MESSAGE_LENGTH) },
   ];
 
-  const activeModel = model();
+  const request = target.build(target.apiKey, systemText, messages);
 
   try {
-    const response = await fetch(API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": API_VERSION,
-      },
-      body: JSON.stringify({
-        model: activeModel,
-        max_tokens: MAX_TOKENS,
-        system: screenContext ? `${SYSTEM_PROMPT}\n\nContexto del kiosco ahora mismo:\n${screenContext}` : SYSTEM_PROMPT,
-        messages,
-        // Sonnet 5.5 tiene thinking adaptativo por defecto y esos tokens
-        // consumen max_tokens. "between_tools" es el nivel más bajo y evita
-        // que el razonamiento se coma el presupuesto de la respuesta.
-        thinking: { type: "between_tools" },
-        output_config: { effort: effort() },
-      }),
+    const response = await fetch(request.url, {
+      ...request.init,
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
 
     if (!response.ok) {
       // Loguear el cuerpo real del error: sin esto no se puede diagnosticar
-      // una 401 por clave mal cargada ni una 400 por parámetro inválido.
-      const detail = (await response.text().catch(() => "")).slice(0, 800);
-      console.error(`[chat] Anthropic respondió ${response.status}: ${detail}`);
+      // una clave mal cargada ni una 400 por parámetro inválido.
+      const raw = (await response.text().catch(() => "")).slice(0, 800);
+      console.error(`[chat] ${target.name} respondió ${response.status}: ${raw}`);
 
       if (response.status === 429) {
         return sendJson(res, 429, { error: "El asistente está ocupado. Probá de nuevo en un momento." });
+      }
+      // Credencial rechazada = configuración, no una caída transitoria. Google
+      // responde 400 y no 401 cuando la clave no existe (medido: API_KEY_INVALID),
+      // así que un 400 también puede ser una clave mala y no un body inválido.
+      if (response.status === 401 || response.status === 403 || (response.status === 400 && isKeyProblem(raw))) {
+        return sendJson(res, 503, { error: "El asistente no está configurado. Revisá las credenciales en Vercel." });
       }
       if (response.status >= 500) {
         return sendJson(res, 502, { error: "El asistente no está disponible. Probá de nuevo." });
@@ -209,20 +346,12 @@ module.exports = async function handler(req, res) {
     }
 
     const data = await response.json();
-    // Los bloques de texto de un mismo mensaje son segmentos contiguos: se
-    // concatenan sin separador para no partir la frase con un salto de línea.
-    const reply = Array.isArray(data.content)
-      ? data.content
-          .filter((block) => block.type === "text" && typeof block.text === "string")
-          .map((block) => block.text)
-          .join("")
-          .trim()
-      : "";
+    const { text: reply, finishReason } = target.parse(data);
 
     if (!reply) {
       console.error(
-        `[chat] La respuesta no contenía texto. stop_reason=${data.stop_reason ?? "desconocido"} ` +
-          `model=${data.model ?? activeModel} usage=${JSON.stringify(data.usage ?? {})}`
+        `[chat] ${target.name} no devolvió texto. finishReason=${finishReason} ` +
+          `model=${request.model} usage=${JSON.stringify(data.usageMetadata ?? data.usage ?? {})}`
       );
       return sendJson(res, 502, { error: "El asistente no devolvió una respuesta. Probá de nuevo." });
     }

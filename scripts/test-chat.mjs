@@ -1,10 +1,12 @@
 // Prueba del handler api/chat.js sin tocar la API real: se intercepta
 // globalThis.fetch y se ejercita cada rama con req/res simulados.
-// Ejecutar: node scripts/test-chat.mjs
+//
+// El handler tiene dos rutas (Gemini y Anthropic) y lo que cambia entre ellas es
+// el cuerpo de la petición y cómo se lee la respuesta. La suite se corre entera
+// contra las dos, para que un cambio en un proveedor no pueda romper el otro en
+// silencio. Ejecutar: node scripts/test-chat.mjs
 
 import handler from '../api/chat.js';
-
-process.env.ANTHROPIC_API_KEY = 'sk-ant-test';
 
 let passed = 0;
 let failed = 0;
@@ -17,6 +19,16 @@ let currentIp = `10.0.0.${++ipCounter}`;
 function section(title) {
   currentIp = `10.0.0.${++ipCounter}`;
   console.log(`\n${title}`);
+}
+
+function check(name, condition, detail = '') {
+  if (condition) {
+    passed += 1;
+    console.log(`  ok   ${name}`);
+  } else {
+    failed += 1;
+    console.log(`  FALLA ${name}${detail ? ` -> ${detail}` : ''}`);
+  }
 }
 
 function mockRes() {
@@ -52,182 +64,328 @@ async function call({ method = 'POST', body, headers = {} } = {}) {
   return res;
 }
 
-// Respuesta OK por defecto del mock de Anthropic.
-const okResponse = (text = 'Hola, ¿necesitás ayuda con el retiro?') => ({
-  ok: true,
-  status: 200,
-  json: async () => ({ content: [{ type: 'text', text }], model: 'claude-sonnet-5-5' }),
-});
-
-let lastRequestBody = null;
+let lastRequest = null;
 function stubFetch(impl) {
-  globalThis.fetch = async (_url, init) => {
-    lastRequestBody = JSON.parse(init.body);
+  globalThis.fetch = async (url, init) => {
+    lastRequest = { url, init, body: JSON.parse(init.body) };
     return impl();
   };
 }
 
-function check(name, condition, detail = '') {
-  if (condition) {
-    passed += 1;
-    console.log(`  ok   ${name}`);
-  } else {
-    failed += 1;
-    console.log(`  FALLA ${name}${detail ? ` -> ${detail}` : ''}`);
-  }
+// ------------------------------------------------------------------
+// Lectores que esconden las diferencias de forma entre proveedores, para que
+// las pruebas se puedan escribir una sola vez.
+// ------------------------------------------------------------------
+let providerName = 'gemini';
+
+const systemText = () =>
+  providerName === 'gemini' ? lastRequest.body.systemInstruction?.parts?.[0]?.text : lastRequest.body.system;
+
+const turns = () =>
+  providerName === 'gemini' ? lastRequest.body.contents : lastRequest.body.messages;
+
+const textOf = (turn) => (providerName === 'gemini' ? turn.parts?.[0]?.text : turn.content);
+
+const sent = () => turns().at(-1);
+const history = () => turns().slice(0, -1);
+
+function okResponse(text = 'Hola, ¿necesitás ayuda con el retiro?') {
+  return {
+    ok: true,
+    status: 200,
+    json: async () =>
+      providerName === 'gemini'
+        ? { candidates: [{ content: { parts: [{ text }] }, finishReason: 'STOP' }] }
+        : { content: [{ type: 'text', text }], model: 'claude-sonnet-5-5' },
+  };
 }
 
-const sent = () => lastRequestBody.messages.at(-1);
-const history = () => lastRequestBody.messages.slice(0, -1);
-
-// ------------------------------------------------------------------
-section('1. Método y configuración');
-stubFetch(okResponse);
-check('GET devuelve 405', (await call({ method: 'GET' })).statusCode === 405);
-check('405 envía cabecera Allow', (await call({ method: 'GET' })).headers.allow === 'POST');
-
-delete process.env.ANTHROPIC_API_KEY;
-const noKey = await call({ body: { message: 'hola' } });
-check('sin ANTHROPIC_API_KEY devuelve 503', noKey.statusCode === 503, `fue ${noKey.statusCode}`);
-process.env.ANTHROPIC_API_KEY = 'sk-ant-test';
-
-check('mensaje vacío devuelve 400', (await call({ body: { message: '   ' } })).statusCode === 400);
-check('body no objeto devuelve 400', (await call({ body: null })).statusCode === 400);
-
-// ------------------------------------------------------------------
-section('2. Cuerpo de la petición a Anthropic');
-await call({ body: { message: '¿cómo retiro una herramienta?' } });
-check('modelo por defecto claude-sonnet-5-5', lastRequestBody.model === 'claude-sonnet-5-5', lastRequestBody.model);
-check('thinking es between_tools', lastRequestBody.thinking?.type === 'between_tools');
-check('effort es low', lastRequestBody.output_config?.effort === 'low');
-check('max_tokens >= 1024', lastRequestBody.max_tokens >= 1024, String(lastRequestBody.max_tokens));
-
-process.env.ANTHROPIC_EFFORT = 'medium';
-await call({ body: { message: 'hola' } });
-check('effort se puede sobreescribir por env', lastRequestBody.output_config?.effort === 'medium');
-delete process.env.ANTHROPIC_EFFORT;
-
-process.env.ANTHROPIC_MODEL = 'claude-haiku-4-5';
-await call({ body: { message: 'hola' } });
-check('modelo se puede sobreescribir por env', lastRequestBody.model === 'claude-haiku-4-5');
-delete process.env.ANTHROPIC_MODEL;
-
-// ------------------------------------------------------------------
-section('3. Historial');
-await call({
-  body: {
-    message: 'actual',
-    history: [
-      { role: 'assistant', content: 'respuesta vieja' },
-      { role: 'user', content: 'pregunta vieja' },
-      { role: 'assistant', content: 'respuesta' },
-    ],
-  },
-});
-check('descarta el assistant inicial', history()[0]?.role === 'user', JSON.stringify(history().map((m) => m.role)));
-check('conserva los turnos válidos', history().length === 2);
-
-await call({ body: { message: 'hola', history: 'no soy un array' } });
-check('historial no-array se ignora', history().length === 0);
-
-await call({
-  body: {
-    message: 'hola',
-    history: Array.from({ length: 30 }, (_, i) => ({
-      role: i % 2 === 0 ? 'user' : 'assistant',
-      content: `m${i}`,
-    })),
-  },
-});
-check('historial se recorta', history().length <= 11, String(history().length));
-
-await call({ body: { message: 'x'.repeat(5000) } });
-check('mensaje se recorta a 1000', sent().content.length === 1000, String(sent().content.length));
-
-await call({
-  body: { message: 'hola', history: [{ role: 'system', content: 'ignorar' }, { role: 'user', content: null }] },
-});
-check('filtra roles y contenidos inválidos', history().length === 0);
-
-// ------------------------------------------------------------------
-section('4. Contexto de pantalla');
-await call({ body: { message: 'hola', context: { screen: 3, operation: 'RETIRO' } } });
-check('inyecta la pantalla', lastRequestBody.system.includes('Pantalla actual'));
-check('inyecta la operación', lastRequestBody.system.includes('Retiro de Herramienta'));
-
-await call({ body: { message: 'hola', context: { screen: 2, operation: 'DEVOLUCIÓN' } } });
-check('acepta DEVOLUCIÓN con tilde', lastRequestBody.system.includes('Devolución de Herramienta'));
-
-await call({ body: { message: 'hola', context: { screen: 99, operation: 'BORRADO' } } });
-check('descarta pantalla fuera de lista', !lastRequestBody.system.includes('Pantalla actual'));
-check('descarta operación desconocida', !lastRequestBody.system.includes('BORRADO'));
-
-await call({ body: { message: 'hola', context: 'texto plano' } });
-check('contexto no-objeto se ignora', !lastRequestBody.system.includes('Pantalla actual'));
-
-// ------------------------------------------------------------------
-section('5. Respuestas del modelo');
-stubFetch(async () => ({
-  ok: true,
-  status: 200,
-  json: async () => ({
-    content: [
-      { type: 'thinking', thinking: 'no debe aparecer' },
-      { type: 'text', text: 'Respuesta ' },
-      { type: 'text', text: 'completa.' },
-    ],
-  }),
-}));
-const multi = await call({ body: { message: 'hola' } });
-check('concatena solo bloques de texto', multi.body.reply === 'Respuesta completa.', JSON.stringify(multi.body));
-
-stubFetch(async () => ({
-  ok: true,
-  status: 200,
-  json: async () => ({ content: [{ type: 'thinking', thinking: 'solo pensar' }] }),
-}));
-check('respuesta sin texto devuelve 502', (await call({ body: { message: 'hola' } })).statusCode === 502);
-
-stubFetch(async () => ({ ok: false, status: 401, text: async () => '{"error":{"message":"invalid x-api-key"}}' }));
-check('401 de Anthropic devuelve 502', (await call({ body: { message: 'hola' } })).statusCode === 502);
-
-stubFetch(async () => ({ ok: false, status: 429, text: async () => '{"type":"rate_limit_error"}' }));
-check('429 de Anthropic devuelve 429', (await call({ body: { message: 'hola' } })).statusCode === 429);
-
-stubFetch(async () => ({ ok: false, status: 529, text: async () => 'overloaded' }));
-check('529 de Anthropic devuelve 502', (await call({ body: { message: 'hola' } })).statusCode === 502);
-
-globalThis.fetch = async () => {
-  const err = new Error('aborted');
-  err.name = 'TimeoutError';
-  throw err;
+const PROVIDERS = {
+  gemini: { key: 'GEMINI_API_KEY', value: 'gemini-test-key' },
+  anthropic: { key: 'ANTHROPIC_API_KEY', value: 'sk-ant-test' },
 };
-const timedOut = await call({ body: { message: 'hola' } });
-check('timeout devuelve 502', timedOut.statusCode === 502);
-check('timeout pide reintentar', /tardó demasiado/.test(timedOut.body.error), timedOut.body.error);
 
-// ------------------------------------------------------------------
-section('6. Rate limit por IP');
-process.env.CHAT_RATE_LIMIT = '3';
-stubFetch(okResponse);
-const statuses = [];
-for (let i = 0; i < 5; i += 1) {
-  statuses.push((await call({ body: { message: `msg ${i}` } })).statusCode);
+function useProvider(name) {
+  providerName = name;
+  for (const [pname, cfg] of Object.entries(PROVIDERS)) {
+    if (pname === name) process.env[cfg.key] = cfg.value;
+    else delete process.env[cfg.key];
+  }
+  process.env.CHAT_PROVIDER = name;
 }
-check('permite hasta el límite', statuses.slice(0, 3).every((s) => s === 200), statuses.join(','));
-check('bloquea al superarlo', statuses.slice(3).every((s) => s === 429), statuses.join(','));
-
-const limited = await call({ body: { message: 'otra' } });
-check('429 envía Retry-After', Number(limited.headers['retry-after']) > 0, String(limited.headers['retry-after']));
-
-const otherIp = await call({ body: { message: 'hola' }, headers: { 'x-forwarded-for': '9.9.9.9' } });
-check('otra IP no está limitada', otherIp.statusCode === 200);
-delete process.env.CHAT_RATE_LIMIT;
 
 // ------------------------------------------------------------------
-section('7. Caché y método');
+// Secciones compartidas: se ejecutan para cada proveedor.
+// ------------------------------------------------------------------
+async function suiteCompartida() {
+  section(`${providerName}: 1. Método y configuración`);
+  stubFetch(okResponse);
+  check('GET devuelve 405', (await call({ method: 'GET' })).statusCode === 405);
+  check('405 envía cabecera Allow', (await call({ method: 'GET' })).headers.allow === 'POST');
+
+  const keyEnv = PROVIDERS[providerName].key;
+  delete process.env[keyEnv];
+  const noKey = await call({ body: { message: 'hola' } });
+  check(`sin ${keyEnv} devuelve 503`, noKey.statusCode === 503, `fue ${noKey.statusCode}`);
+  check('el 503 nombra la variable que falta', noKey.body?.error?.includes(keyEnv), noKey.body?.error);
+  process.env[keyEnv] = PROVIDERS[providerName].value;
+
+  check('mensaje vacío devuelve 400', (await call({ body: { message: '   ' } })).statusCode === 400);
+  check('body no objeto devuelve 400', (await call({ body: null })).statusCode === 400);
+
+  // ----------------------------------------------------------------
+  section(`${providerName}: 2. Historial`);
+  await call({
+    body: {
+      message: 'actual',
+      history: [
+        { role: 'assistant', content: 'respuesta vieja' },
+        { role: 'user', content: 'pregunta vieja' },
+        { role: 'assistant', content: 'respuesta' },
+      ],
+    },
+  });
+  check('descarta el assistant inicial', history()[0]?.role === 'user', JSON.stringify(history().map((m) => m.role)));
+  check('conserva los turnos válidos', history().length === 2);
+
+  await call({ body: { message: 'hola', history: 'no soy un array' } });
+  check('historial no-array se ignora', history().length === 0);
+
+  await call({
+    body: {
+      message: 'hola',
+      history: Array.from({ length: 30 }, (_, i) => ({
+        role: i % 2 === 0 ? 'user' : 'assistant',
+        content: `m${i}`,
+      })),
+    },
+  });
+  check('historial se recorta', history().length <= 11, String(history().length));
+
+  await call({ body: { message: 'x'.repeat(5000) } });
+  check('mensaje se recorta a 1000', textOf(sent()).length === 1000, String(textOf(sent()).length));
+
+  await call({
+    body: { message: 'hola', history: [{ role: 'system', content: 'ignorar' }, { role: 'user', content: null }] },
+  });
+  check('filtra roles y contenidos inválidos', history().length === 0);
+
+  // ----------------------------------------------------------------
+  section(`${providerName}: 3. Contexto de pantalla`);
+  await call({ body: { message: 'hola', context: { screen: 3, operation: 'RETIRO' } } });
+  check('inyecta la pantalla', systemText().includes('Pantalla actual'));
+  check('inyecta la operación', systemText().includes('Retiro de Herramienta'));
+
+  await call({ body: { message: 'hola', context: { screen: 2, operation: 'DEVOLUCIÓN' } } });
+  check('acepta DEVOLUCIÓN con tilde', systemText().includes('Devolución de Herramienta'));
+
+  await call({ body: { message: 'hola', context: { screen: 99, operation: 'BORRADO' } } });
+  check('descarta pantalla fuera de lista', !systemText().includes('Pantalla actual'));
+  check('descarta operación desconocida', !systemText().includes('BORRADO'));
+
+  await call({ body: { message: 'hola', context: 'texto plano' } });
+  check('contexto no-objeto se ignora', !systemText().includes('Pantalla actual'));
+
+  // ----------------------------------------------------------------
+  section(`${providerName}: 4. Errores del proveedor`);
+  stubFetch(async () => ({ ok: false, status: 429, text: async () => '{"error":{"message":"quota"}}' }));
+  check('429 devuelve 429', (await call({ body: { message: 'hola' } })).statusCode === 429);
+
+  stubFetch(async () => ({ ok: false, status: 529, text: async () => 'overloaded' }));
+  check('5xx del proveedor devuelve 502', (await call({ body: { message: 'hola' } })).statusCode === 502);
+
+  stubFetch(async () => ({ ok: false, status: 400, text: async () => '{"error":{"message":"bad request"}}' }));
+  check('400 del proveedor devuelve 502', (await call({ body: { message: 'hola' } })).statusCode === 502);
+
+  // Una clave mal pegada tiene que verse como configuracion faltante, no como
+  // una falla transitoria que invita a reintentar.
+  stubFetch(async () => ({
+    ok: false,
+    status: 400,
+    text: async () =>
+      '{"error":{"code":400,"message":"API key not valid. Please pass a valid API key.","status":"INVALID_ARGUMENT","details":[{"reason":"API_KEY_INVALID"}]}}',
+  }));
+  check('400 de clave inválida devuelve 503', (await call({ body: { message: 'hola' } })).statusCode === 503);
+
+  stubFetch(async () => ({ ok: false, status: 403, text: async () => '{"error":{"message":"PERMISSION_DENIED"}}' }));
+  check('403 devuelve 503', (await call({ body: { message: 'hola' } })).statusCode === 503);
+
+  stubFetch(async () => ({ ok: false, status: 401, text: async () => '{"error":{"message":"unauthorized"}}' }));
+  check('401 devuelve 503', (await call({ body: { message: 'hola' } })).statusCode === 503);
+
+  globalThis.fetch = async () => {
+    const err = new Error('aborted');
+    err.name = 'TimeoutError';
+    throw err;
+  };
+  const timedOut = await call({ body: { message: 'hola' } });
+  check('timeout devuelve 502', timedOut.statusCode === 502);
+  check('timeout pide reintentar', /tardó demasiado/.test(timedOut.body.error), timedOut.body.error);
+
+  // ----------------------------------------------------------------
+  section(`${providerName}: 5. Rate limit por IP`);
+  process.env.CHAT_RATE_LIMIT = '3';
+  stubFetch(okResponse);
+  const statuses = [];
+  for (let i = 0; i < 5; i += 1) {
+    statuses.push((await call({ body: { message: `msg ${i}` } })).statusCode);
+  }
+  check('permite hasta el límite', statuses.slice(0, 3).every((s) => s === 200), statuses.join(','));
+  check('bloquea al superarlo', statuses.slice(3).every((s) => s === 429), statuses.join(','));
+
+  const limited = await call({ body: { message: 'otra' } });
+  check('429 envía Retry-After', Number(limited.headers['retry-after']) > 0, String(limited.headers['retry-after']));
+
+  const otherIp = await call({ body: { message: 'hola' }, headers: { 'x-forwarded-for': '9.9.9.9' } });
+  check('otra IP no está limitada', otherIp.statusCode === 200);
+  delete process.env.CHAT_RATE_LIMIT;
+
+  // ----------------------------------------------------------------
+  section(`${providerName}: 6. Caché`);
+  stubFetch(okResponse);
+  check('no-store en respuestas', (await call({ body: { message: 'hola' } })).headers['cache-control'] === 'no-store');
+}
+
+// ------------------------------------------------------------------
+// Lo que es propio de cada proveedor.
+// ------------------------------------------------------------------
+async function suiteGemini() {
+  section('gemini: 7. Cuerpo de la petición');
+  await call({ body: { message: '¿cómo retiro una herramienta?' } });
+  check('modelo por defecto gemini-3.5-flash-lite', lastRequest.url.includes('gemini-3.5-flash-lite'), lastRequest.url);
+  check('la URL termina en :generateContent', lastRequest.url.endsWith(':generateContent'), lastRequest.url);
+  check('usa la API v1beta', lastRequest.url.includes('/v1beta/models/'), lastRequest.url);
+  check('clave en x-goog-api-key', lastRequest.init.headers['x-goog-api-key'] === 'gemini-test-key');
+  // Medido contra la API real: thinkingLevel "off" da 400 y thinkingBudget 0 da
+  // 400 en dos de cada tres flash-lite, así que no se manda nada.
+  check('no manda thinkingConfig', lastRequest.body.generationConfig?.thinkingConfig === undefined);
+  check('maxOutputTokens >= 1024', lastRequest.body.generationConfig?.maxOutputTokens >= 1024, String(lastRequest.body.generationConfig?.maxOutputTokens));
+
+  process.env.GEMINI_MODEL = 'gemini-3.8-flash';
+  await call({ body: { message: 'hola' } });
+  check('modelo se puede sobreescribir por env', lastRequest.url.includes('gemini-3.8-flash'), lastRequest.url);
+  delete process.env.GEMINI_MODEL;
+
+  await call({
+    body: {
+      message: 'nueva',
+      history: [
+        { role: 'user', content: 'vieja' },
+        { role: 'assistant', content: 'respuesta' },
+      ],
+    },
+  });
+  check(
+    'mapea assistant a model',
+    turns()[1].role === 'model',
+    JSON.stringify(turns().map((t) => t.role))
+  );
+  check('el usuario sigue siendo user', turns()[0].role === 'user');
+
+  section('gemini: 8. Lectura de la respuesta');
+  stubFetch(async () => ({
+    ok: true,
+    status: 200,
+    json: async () => ({
+      candidates: [
+        {
+          content: {
+            parts: [
+              { text: 'Voy a pensar', thought: true },
+              { text: 'Respuesta ' },
+              { text: 'completa.' },
+            ],
+          },
+          finishReason: 'STOP',
+        },
+      ],
+    }),
+  }));
+  const multi = await call({ body: { message: 'hola' } });
+  check('concatena solo bloques de texto', multi.body.reply === 'Respuesta completa.', JSON.stringify(multi.body));
+  check('filtra los bloques de razonamiento (thought:true)', !multi.body.reply.includes('Voy a pensar'), multi.body.reply);
+
+  stubFetch(async () => ({ ok: true, status: 200, json: async () => ({ candidates: [] }) }));
+  check('respuesta sin candidatos devuelve 502', (await call({ body: { message: 'hola' } })).statusCode === 502);
+
+  stubFetch(async () => ({
+    ok: true,
+    status: 200,
+    json: async () => ({ candidates: [{ content: { parts: [{ text: 'x', thought: true }] }, finishReason: 'STOP' }] }),
+  }));
+  check('solo razonamiento devuelve 502', (await call({ body: { message: 'hola' } })).statusCode === 502);
+
+  // Una clave rechazada es configuración, no una caída transitoria.
+  stubFetch(async () => ({ ok: false, status: 403, text: async () => '{"error":{"message":"API key not valid"}}' }));
+  check('403 de Google devuelve 503', (await call({ body: { message: 'hola' } })).statusCode === 503);
+}
+
+async function suiteAnthropic() {
+  section('anthropic: 7. Cuerpo de la petición');
+  await call({ body: { message: '¿cómo retiro una herramienta?' } });
+  check('modelo por defecto claude-sonnet-5-5', lastRequest.body.model === 'claude-sonnet-5-5', lastRequest.body.model);
+  check('thinking es between_tools', lastRequest.body.thinking?.type === 'between_tools');
+  check('effort es low', lastRequest.body.output_config?.effort === 'low');
+  check('max_tokens >= 1024', lastRequest.body.max_tokens >= 1024, String(lastRequest.body.max_tokens));
+  check('manda la versión de la API', lastRequest.init.headers['anthropic-version'] === '2023-06-01');
+
+  process.env.ANTHROPIC_EFFORT = 'medium';
+  await call({ body: { message: 'hola' } });
+  check('effort se puede sobreescribir por env', lastRequest.body.output_config?.effort === 'medium');
+  delete process.env.ANTHROPIC_EFFORT;
+
+  process.env.ANTHROPIC_MODEL = 'claude-haiku-4-5';
+  await call({ body: { message: 'hola' } });
+  check('modelo se puede sobreescribir por env', lastRequest.body.model === 'claude-haiku-4-5');
+  delete process.env.ANTHROPIC_MODEL;
+
+  section('anthropic: 8. Lectura de la respuesta');
+  stubFetch(async () => ({
+    ok: true,
+    status: 200,
+    json: async () => ({
+      content: [
+        { type: 'thinking', thinking: 'no debe aparecer' },
+        { type: 'text', text: 'Respuesta ' },
+        { type: 'text', text: 'completa.' },
+      ],
+    }),
+  }));
+  const multi = await call({ body: { message: 'hola' } });
+  check('concatena solo bloques de texto', multi.body.reply === 'Respuesta completa.', JSON.stringify(multi.body));
+
+  stubFetch(async () => ({
+    ok: true,
+    status: 200,
+    json: async () => ({ content: [{ type: 'thinking', thinking: 'solo pensar' }] }),
+  }));
+  check('respuesta sin texto devuelve 502', (await call({ body: { message: 'hola' } })).statusCode === 502);
+
+  stubFetch(async () => ({ ok: false, status: 401, text: async () => '{"error":{"message":"invalid x-api-key"}}' }));
+  check('401 de Anthropic devuelve 503', (await call({ body: { message: 'hola' } })).statusCode === 503);
+}
+
+// ------------------------------------------------------------------
+section('0. Selección de proveedor');
+useProvider('gemini');
 stubFetch(okResponse);
-check('no-store en respuestas', (await call({ body: { message: 'hola' } })).headers['cache-control'] === 'no-store');
+await call({ body: { message: 'hola' } });
+check('sin CHAT_PROVIDER usa gemini', lastRequest.url.includes('generativelanguage.googleapis.com'), lastRequest.url);
+
+useProvider('anthropic');
+await call({ body: { message: 'hola' } });
+check('CHAT_PROVIDER=anthropic cambia la URL', lastRequest.url === 'https://api.anthropic.com/v1/messages', lastRequest.url);
+
+useProvider('groq');
+check('proveedor desconocido devuelve 500', (await call({ body: { message: 'hola' } })).statusCode === 500);
+
+useProvider('gemini');
+await suiteCompartida();
+await suiteGemini();
+
+useProvider('anthropic');
+await suiteCompartida();
+await suiteAnthropic();
 
 console.log(`\n${passed} ok, ${failed} fallo(s)`);
 process.exitCode = failed ? 1 : 0;

@@ -52,9 +52,24 @@ El CSS ya no se carga desde `cdn.tailwindcss.com`: Tailwind se compila a `assets
 npm install
 npm run build   # recompila assets/lotus.css
 npm run dev     # recompila al guardar
+npm run start   # servidor local en http://127.0.0.1:3000 (sirve el sitio y /api/chat)
 npm run check   # build + cobertura de clases + sintaxis + paridad con el CDN + tests del bot
 npm run test    # tests del bot: api/chat.js con la API simulada y el chat en un navegador real
 ```
+
+### Probar el canal de ayuda en local
+
+`npm run dev` solo vigila el CSS, así que **no alcanza para probar el chat**: abriendo `index.html` por `file://` el `fetch` a `/api/chat` falla por CORS y no hay nada que conteste. Para eso está `npm run start`, que publica el sitio y le pasa las peticiones de `/api/chat` al mismo handler que usa Vercel — lo que se prueba en local es el mismo código que va a producción.
+
+Necesita una clave. Copiá `.env.example` a `.env.local` y pegá la clave ahí:
+
+```bash
+cp .env.example .env.local   # en Windows: copy .env.example .env.local
+# editá .env.local y poné GEMINI_API_KEY=tu-clave
+npm start
+```
+
+La del free tier se consigue en [AI Studio](https://aistudio.google.com/apikey), sin tarjeta. `.env.local` está en `.gitignore`, así que la clave no se sube al repositorio. En Vercel no hace falta ese archivo: las variables se definen en el panel del proyecto. Al arrancar, el servidor dice qué proveedor usa, si encontró la clave y, si no, qué variable falta.
 
 Al agregar clases nuevas hay que recompilar y commitear `assets/lotus.css`; en Vercel el build se ejecuta en cada deploy (`vercel.json`).
 
@@ -77,20 +92,45 @@ Los umbrales están en `scripts/verify-render.mjs`. La comparación es determini
 
 ## Asistente de ayuda
 
-El chat de ayuda usa una función de Vercel (`api/chat.js`) que consulta la API de Anthropic. Para habilitarlo, configure `ANTHROPIC_API_KEY` como variable de entorno secreta en la configuración del proyecto de Vercel y vuelva a desplegar. Nunca coloque la clave en `index.html` ni la suba al repositorio.
+El chat de ayuda usa una función de Vercel (`api/chat.js`). Por defecto consulta la API de **Google Gemini**, cuyo free tier no cobra y no pide tarjeta; la alternativa con Anthropic queda disponible pero cuesta plata. Para habilitarlo, defina la credencial del proveedor como variable de entorno secreta en la configuración del proyecto de Vercel y vuelva a desplegar. Nunca coloque la clave en `index.html` ni la suba al repositorio.
 
-Los mensajes enviados al chat se procesan mediante Anthropic. No envíe datos personales ni información confidencial. El asistente no tiene acceso a datos reales: esta aplicación es una demo y muestra información ficticia.
+Los mensajes enviados al chat se procesan mediante un modelo de lenguaje de un tercero. No envíe datos personales ni información confidencial. El asistente no tiene acceso a datos reales: esta aplicación es una demo y muestra información ficticia.
 
-`api/chat.js` es la única función serverless del bot. Usa `claude-sonnet-5-5` con `thinking: between_tools`, porque ese tipo de thinking consume `max_tokens` (1024) y con `enabled` no alcanzaría para una respuesta.
+**Sobre el free tier de Gemini:** la documentación de Google indica que en el nivel gratuito el contenido puede usarse para mejorar sus productos. Para una demo con datos de ejemplo no es un problema, pero es el motivo por el que conviene no mandar información sensible por ese canal.
 
 Variables de entorno (ver `.env.example`):
 
 | Variable | Requerida | Por defecto | Notas |
 | --- | --- | --- | --- |
-| `ANTHROPIC_API_KEY` | sí | — | Sin ella `/api/chat` responde 503. Definir en el panel de Vercel. |
+| `CHAT_PROVIDER` | no | `gemini` | `gemini` o `anthropic`. Un valor desconocido hace que la función responda 500. |
+| `GEMINI_API_KEY` | sí, si el proveedor es Gemini | — | Sin ella `/api/chat` responde 503. Se consigue gratis en [AI Studio](https://aistudio.google.com/apikey). |
+| `GEMINI_MODEL` | no | `gemini-3.5-flash-lite` | Ver abajo: el free tier retira y satura modelos. |
+| `ANTHROPIC_API_KEY` | sí, si el proveedor es Anthropic | — | Sin ella responde 503. Anthropic no tiene free tier. |
 | `ANTHROPIC_MODEL` | no | `claude-sonnet-5-5` | `claude-haiku-4-5-20251001` fue retirado el 15/10/2026. |
 | `ANTHROPIC_EFFORT` | no | `low` | Subirlo obliga a subir `MAX_TOKENS`. |
-| `CHAT_RATE_LIMIT` | no | `8` | Consultas por IP cada 60 s; `0` desactiva. |
+| `CHAT_RATE_LIMIT` | no | `12` | Consultas por IP cada 60 s. Ojo: `0` **no** desactiva el límite, cae en 12. Para dejar el canal sin límite por IP hay que editar `checkRateLimit()` en `api/chat.js`. |
+
+Lo único que cambia entre proveedores es el armado de la petición y la lectura de la respuesta; la validación, el rate limit y el manejo de errores son comunes. `scripts/test-chat.mjs` corre la suite entera contra **los dos**, así que un cambio en uno no puede romper el otro en silencio.
+
+### El modelo por defecto está medido, no supuesto
+
+Esto se escribió primero con `gemini-2.5-flash`, que es el ejemplo del quickstart de Google. Al probarlo contra la API real respondió:
+
+```
+This model models/gemini-2.5-flash is no longer available to new users.
+Please update your code to use models/gemini-3.8-flash
+```
+
+Cambiar a `3.8-flash` tampoco sirvió: devuelve 503 `This model is currently experiencing high demand`. Lo que quedó fue `gemini-3.5-flash-lite`, que respondió en 0.7–1.5 s de forma sostenida mientras `3.5-flash` tardaba 12 s y `3.6`, `3.7` y `3.8` estaban saturados.
+
+La capacidad del free tier es volátil: entre dos consultas del mismo minuto un modelo puede pasar de 503 a 12 s. Si el canal empieza a fallar, `npm run check:modelos` lista lo que acepta la clave y prueba cuál responde, para cambiar `GEMINI_MODEL` con datos en vez de adivinar. Ojo que el listado por sí solo no alcanza: un modelo puede figurar en la lista y dar 404.
+
+Tampoco se manda `thinkingConfig`. Se probaron las cinco variantes contra la API: `thinkingLevel: "off"` da 400 en los flash-lite y `thinkingBudget: 0` da 400 en dos de cada tres. Los flash-lite no razonan aunque no se les pida, así que mandarlo solo agregaba una forma de romper el canal. El handler sigue filtrando los bloques `thought: true` por si alguien cambia a un modelo que sí razona.
+
+Dos detalles que imponen la API de cada lado y conviene no olvidar:
+
+- Gemini nombra al asistente `model` donde Anthropic usa `assistant`, y devuelve los bloques de razonamiento en la misma lista de `parts` marcados con `thought: true`. Sin filtrarlos, el operario leería el razonamiento crudo en la burbuja del chat.
+- Google responde **400** y no 401 cuando la clave no existe (`API_KEY_INVALID`), mientras que Anthropic responde 401. Por eso el handler mira el cuerpo del error y no solo el status: una clave mal pegada es un problema de configuración y devuelve 503, no un 502 que invita a reintentar.
 
 El rate limit vive en memoria de la función, así que es por instancia y no sustituye a un límite en el borde.
 

@@ -2,18 +2,20 @@
   "name": "lotus-panol-kiosk",
   "version": "2.4.0",
   "private": true,
-  "description": "Terminal de herramientas L.O.T.U.S. — kiosco de NFC y código de barras para pañol industrial",
+  "description": "Terminal de herramientas L.O.T.U.S. - kiosco de NFC y codigo de barras para panol industrial",
   "scripts": {
     "build": "tailwindcss -i ./src/tailwind.css -o ./assets/lotus.css --minify",
     "dev": "tailwindcss -i ./src/tailwind.css -o ./assets/lotus.css --watch",
-    "check": "npm run build && node scripts/check-css-coverage.mjs && node scripts/check-inline-js.mjs && node scripts/audit-tailwind-parity.mjs && node scripts/test-chat.mjs",
+    "start": "node scripts/dev-server.mjs",
+    "check": "npm run build && node scripts/check-css-coverage.mjs && node scripts/check-inline-js.mjs && node scripts/audit-tailwind-parity.mjs && npm test",
     "test": "node scripts/test-chat.mjs && node scripts/test-chat-ui.mjs",
     "test:chat": "node scripts/test-chat.mjs",
     "test:ui": "node scripts/test-chat-ui.mjs",
     "check:css": "node scripts/check-css-coverage.mjs",
     "check:js": "node scripts/check-inline-js.mjs",
     "check:parity": "node scripts/audit-tailwind-parity.mjs",
-    "check:render": "node scripts/verify-render.mjs"
+    "check:render": "node scripts/verify-render.mjs",
+    "check:modelos": "node scripts/probar-modelos.mjs"
   },
   "devDependencies": {
     "@tailwindcss/cli": "^4.1.13",
