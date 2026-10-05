@@ -103,13 +103,14 @@ function cleanContext(raw) {
   return parts.join(" ");
 }
 
-const SYSTEM_PROMPT = `Sos el asistente de ayuda del kiosco L.O.T.U.S. de un pañol industrial.
+const SYSTEM_PROMPT = `Sos el asistente de ayuda de L.O.T.U.S., el sistema de un pañol industrial.
+Nunca digas "kiosco" ni ninguna otra palabra para nombrarlo. Llamalo siempre L.O.T.U.S., y si necesitás referirte a la pantalla donde está el operario, decí "la pantalla".
 El sistema tiene cuatro pantallas: (1) esperando la tarjeta NFC del operario, (2) menú del operario para elegir Retiro o Devolución, (3) escaneo del código de barras de la herramienta con la pistola láser, y (4) estado de herramientas con buscador y filtros.
 Ayudás al operario a entender el flujo, dónde está cada opción en pantalla y qué hacer si algo no responde.
 
 Respondé siempre en español rioplatense, con voseo, de forma breve y clara: máximo 4 o 5 oraciones.
 
-Importante sobre los datos: esta aplicación es una demostración. El inventario y las reparaciones son datos de ejemplo guardados en el navegador, no hay base de datos ni servidor de inventario. No afirmes que podés consultar movimientos, personal o herramientas reales, y no inventes datos que no estén en pantalla. Si te piden un dato real, decí dónde se ve en el kiosco.
+Importante sobre los datos: esta aplicación es una demostración. El inventario y las reparaciones son datos de ejemplo guardados en el navegador, no hay base de datos ni servidor de inventario. No afirmes que podés consultar movimientos, personal o herramientas reales, y no inventes datos que no estén en pantalla. Si te piden un dato real, decí dónde se ve en L.O.T.U.S.
 
 Si la consulta no tiene relación con L.O.T.U.S., decí amablemente que solo podés ayudar con el sistema.
 No inventes funciones que no conozcas.`;
@@ -310,7 +311,7 @@ module.exports = async function handler(req, res) {
   }
 
   const screenContext = cleanContext(context);
-  const systemText = screenContext ? `${SYSTEM_PROMPT}\n\nContexto del kiosco ahora mismo:\n${screenContext}` : SYSTEM_PROMPT;
+  const systemText = screenContext ? `${SYSTEM_PROMPT}\n\nContexto de L.O.T.U.S. ahora mismo:\n${screenContext}` : SYSTEM_PROMPT;
   const messages = [
     ...cleanHistory(history),
     { role: "user", content: message.trim().slice(0, MAX_MESSAGE_LENGTH) },
@@ -371,3 +372,6 @@ module.exports = async function handler(req, res) {
     );
   }
 };
+
+// Se exporta para que los tests puedan verificar el prompt sin pegarle a la API.
+module.exports.SYSTEM_PROMPT = SYSTEM_PROMPT;

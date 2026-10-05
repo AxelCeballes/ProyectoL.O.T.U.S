@@ -670,7 +670,7 @@
       </div>
       <div id="chatMessages" class="flex-1 space-y-3 overflow-y-auto bg-slate-50 p-4" role="log" aria-live="polite" aria-relevant="additions text">
         <p class="max-w-[85%] rounded-2xl rounded-tl-sm border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
-          ¡Hola! Puedo ayudarte con el uso del sistema L.O.T.U.S.
+          ¡Hola! Soy el asistente de L.O.T.U.S. ¿En qué te ayudo?
         </p>
       </div>
       <form id="chatForm" class="flex items-end gap-2 border-t border-slate-200 bg-white p-3">
@@ -1129,6 +1129,12 @@
     // GESTIÓN DE FOCO Y TECLADO (HID WEDGE EMULATION)
     // ----------------------------------------------------
     function maintainFocus() {
+      // Con el chat abierto nunca se le roba el foco al textarea: los inputs de
+      // NFC y de barras son invisibles y viven enfocados para emular un HID, así
+      // que enfocarlos acá mandaba la escritura a otro lado y el chat parecía
+      // no aceptar teclado. El operario escribiendo tiene prioridad.
+      if (!chatPanel.classList.contains('hidden')) return;
+
       if (state.currentScreen === 1) {
         nfcInput.focus();
       } else if (state.currentScreen === 3) {
@@ -1138,6 +1144,9 @@
 
     // Re-enfocar automáticamente si el usuario hace clic en el área
     window.addEventListener('click', (e) => {
+      // Nunca si el click fue dentro del chat: maintainFocus() saltaría el foco
+      // al input invisible del lector y el textarea perdería el cursor.
+      if (chatPanel.contains(e.target)) return;
       if (!e.target.closest('button') && !e.target.closest('a') && !e.target.closest('input') && !e.target.closest('select')) {
         maintainFocus();
       }

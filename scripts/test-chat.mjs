@@ -8,6 +8,8 @@
 
 import handler from '../api/chat.js';
 
+const { SYSTEM_PROMPT } = handler;
+
 let passed = 0;
 let failed = 0;
 
@@ -118,6 +120,27 @@ function useProvider(name) {
 // Secciones compartidas: se ejecutan para cada proveedor.
 // ------------------------------------------------------------------
 async function suiteCompartida() {
+  section(`${providerName}: 0. Cómo se nombra al sistema`);
+
+  // El operario no quiere que el asistente diga "kiosco". La palabra tiene que
+  // seguir apareciendo en el prompt, pero solo dentro de la linea que la
+  // prohibe: si alguien la reescribe como nombre del sistema, esto falla.
+  const lineasConKiosco = SYSTEM_PROMPT.split('\n').filter((l) => /kiosco/i.test(l));
+  check(
+    'el prompt prohibe "kiosco" de forma explícita',
+    /nunca digas\s+"kiosco"/i.test(SYSTEM_PROMPT),
+    'sin la prohibicion, el modelo vuelve a usarlo'
+  );
+  check(
+    '"kiosco" solo aparece en la linea que lo prohibe',
+    lineasConKiosco.every((l) => /nunca digas/i.test(l)),
+    `fuera de la prohibicion: ${lineasConKiosco.filter((l) => !/nunca digas/i.test(l)).join(' | ')}`
+  );
+  check(
+    'el prompt se presenta solo como L.O.T.U.S.',
+    /sos el asistente de ayuda de L\.O\.T\.U\.S\./i.test(SYSTEM_PROMPT)
+  );
+
   section(`${providerName}: 1. Método y configuración`);
   stubFetch(okResponse);
   check('GET devuelve 405', (await call({ method: 'GET' })).statusCode === 405);

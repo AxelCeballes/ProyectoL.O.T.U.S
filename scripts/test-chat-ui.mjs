@@ -77,11 +77,49 @@ const STUB = `<script>
     return line;
   }
 
+  // El foco es el bug: maintainFocus() enfoca los inputs invisibles de NFC y de
+  // barras para emular un HID, y si gana la carrera el textarea queda sin cursor.
+  // Se reproduce el steal explicitamente y se mide quien tiene el foco.
+  function focusedId() {
+    var a = document.activeElement;
+    if (!a) return '(nada)';
+    return a.id || a.tagName.toLowerCase();
+  }
+
   window.__run = async function () {
     note('arrancando');
     setChatOpen(true);
     note('chat abierto');
+    note('foco tras abrir el chat: ' + focusedId());
+
+    // steal 1: maintainFocus() en full, con el chat abierto
+    maintainFocus();
+    note('foco tras maintainFocus con el chat abierto: ' + focusedId());
+
+    // steal 2: el listener global de click, con un click dentro del panel
+    window.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    note('foco tras click generico con el chat abierto: ' + focusedId());
+
+    // steal 3: el click real sobre el textarea
+    chatInput.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    note('foco tras click sobre el textarea: ' + focusedId());
+
+    // steal 4: el setTimeout(maintainFocus, 250) que dispara goToScreen
+    maintainFocus();
+    await sleep(300);
+    note('foco 300 ms despues: ' + focusedId());
+
+    // Y con el chat cerrado el HID tiene que recuperar el foco, si no se rompio.
+    setChatOpen(false);
+    maintainFocus();
+    note('foco con el chat cerrado: ' + focusedId());
+    setChatOpen(true);
+
+    // Escritura real: si el foco se fue, esto no llega al textarea.
+    chatInput.value = '';
+    chatInput.focus();
     chatInput.value = 'mensaje de prueba';
+    note('lo escrito queda en el textarea: ' + (chatInput.value === 'mensaje de prueba'));
     chatForm.requestSubmit();
     note('formulario enviado');
 
@@ -104,6 +142,9 @@ const STUB = `<script>
     note('texto de la burbuja de usuario: ' + (after.length ? after[0].textContent : '(ninguna)'));
     note('botones de reintentar restantes: ' + retryButtons().length);
     note('historial tras el exito: ' + chatHistoryLength());
+    note('saludo del chat: ' + chatMessages.textContent.trim().slice(0, 80));
+    note('el saludo dice kiosco: ' + /kiosco/i.test(chatMessages.textContent));
+    note('caracteres escritos en el textarea: ' + chatInput.value.length);
     note('hay respuesta del asistente: ' +
       (document.getElementById('chatMessages').textContent.indexOf('RESPUESTA DE PRUEBA') !== -1));
     return true;
@@ -219,6 +260,42 @@ if (log.find((l) => l.startsWith('hay respuesta del asistente: '))?.slice(-4) !=
 }
 const bubbleText = log.find((l) => l.startsWith('texto de la burbuja de usuario: '))?.slice('texto de la burbuja de usuario: '.length);
 if (bubbleText !== 'mensaje de prueba') failures.push(`la burbuja de usuario quedo con el texto "${bubbleText}"`);
+
+// El foco no puede escaparse del chat mientras esta abierto. maintainFocus() lo
+// roba a proposito para los lectores invisibles de NFC y barras; con el chat a la
+// vista tiene que rendirse.
+const focoEsperado = 'chatInput';
+const etiquetasFoco = [
+  'foco tras maintainFocus con el chat abierto:',
+  'foco tras click generico con el chat abierto:',
+  'foco tras click sobre el textarea:',
+  'foco 300 ms despues:',
+];
+for (const etiqueta of etiquetasFoco) {
+  const real = log.find((l) => l.startsWith(etiqueta))?.slice(etiqueta.length).trim();
+  if (real !== focoEsperado) failures.push(`${etiqueta} el foco quedo en ${real}, deberia seguir en ${focoEsperado}`);
+}
+
+// Y con el chat cerrado el HID tiene que recuperar el foco: si esto fallara, el
+// arreglo de arriba habria roto la simulacion de NFC/barras en silencio.
+const focoCerrado = log.find((l) => l.startsWith('foco con el chat cerrado:'))?.slice('foco con el chat cerrado:'.length).trim();
+if (focoCerrado !== 'nfcInput' && focoCerrado !== 'barcodeInput') {
+  failures.push(`con el chat cerrado el lector deberia recuperar el foco, quedo en ${focoCerrado}`);
+}
+
+// La escritura tiene que llegar al textarea: es el sintoma que reporto el operario.
+if (log.find((l) => l.startsWith('lo escrito queda en el textarea: '))?.slice(-4) !== 'true') {
+  failures.push('la escritura no llego al textarea del chat');
+}
+
+// El saludo con el que arranca el chat: se llama L.O.T.U.S. y nada mas.
+if (log.find((l) => l.startsWith('el saludo dice kiosco: '))?.slice(-5) !== 'false') {
+  failures.push('el saludo del chat todavia dice "kiosco"');
+}
+const saludo = log.find((l) => l.startsWith('saludo del chat: '))?.slice('saludo del chat: '.length) ?? '';
+if (!/L\.O\.T\.U\.S\./.test(saludo)) {
+  failures.push(`el saludo deberia nombrarse L.O.T.U.S., dice: "${saludo}"`);
+}
 
 console.log('');
 if (failures.length) {
