@@ -40,10 +40,7 @@ Los datos que aparecen son ficticios. La página no registra movimientos reales 
 
 ## Panel de administración y reparaciones
 
-El botón «Panel Admin» abre el inventario de ejemplo y permite consultar y registrar reparaciones. En modo local, los cambios se guardan en `localStorage` del navegador y solo existen en ese navegador. No son datos compartidos ni un registro real.
-
-`repairs-router.js` es una opción independiente para un servidor Express propio; no se usa en el despliegue estático de Vercel. Para persistencia compartida en producción, conecte el panel a una base de datos y agregue autenticación de administrador antes de habilitar escrituras.
-
+El botón «Panel Admin» abre el inventario de ejemplo y permite consultar y registrar reparaciones.
 -AXEL CEBALLES
 -FEDERICO LERA
 -BERENICE
