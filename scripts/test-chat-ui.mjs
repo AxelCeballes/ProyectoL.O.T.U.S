@@ -38,15 +38,31 @@ const BYPASS = `<script>
 const STUB = `<script>
 (function () {
   var calls = 0;
+  var bodies = [];
   window.__calls = function () { return calls; };
+  window.__bodies = function () { return bodies; };
+  // Inventario sembrado en localStorage: el chat tiene que mandarlo al backend o
+  // el bot responde de memoria.
+  var SEMBRADO = [{ id: 'LOTUS-A1', name: 'Taladro DeWalt', category: 'Eléctricas', status: 'available' }];
+  try { localStorage.setItem('lotus.tools.v1', JSON.stringify(SEMBRADO)); } catch (e) {}
+  window.__sembrado = SEMBRADO.length;
+  window.__tools = function () {
+    try { return JSON.parse(localStorage.getItem('lotus.tools.v1') || '[]'); } catch (e) { return []; }
+  };
   window.fetch = function (url, opts) {
     calls++;
+    try { bodies.push(JSON.parse(opts.body)); } catch (e) { bodies.push(null); }
     if (calls === 1) {
       return Promise.reject(new TypeError('Failed to fetch'));
     }
     return Promise.resolve({
       ok: true,
-      json: function () { return Promise.resolve({ reply: 'RESPUESTA DE PRUEBA' }); },
+      json: function () {
+        return Promise.resolve({
+          reply: 'RESPUESTA DE PRUEBA',
+          agregar: [{ name: 'Pinza Pelacables', category: 'Manuales', status: 'available' }],
+        });
+      },
     });
   };
 
@@ -135,6 +151,23 @@ const STUB = `<script>
 
     for (var j = 0; j < 60 && window.__calls() < 2; j++) await sleep(100);
     await sleep(600);
+
+    // El inventario tiene que viajar en cada consulta: sin esto el bot no puede
+    // contar herramientas. Y las altas que devuelve tienen que terminar en
+    // localStorage, que es de donde el panel las lee.
+    var bodies = window.__bodies();
+    var ultima = bodies.length ? bodies[bodies.length - 1] : null;
+    note('consultas con inventario: ' +
+      bodies.filter(function (b) { return b && Array.isArray(b.inventario) && b.inventario.length > 0; }).length);
+    note('herramientas del inventario enviado: ' + (ultima && ultima.inventario ? ultima.inventario.length : -1));
+    note('el inventario enviado trae la sembrada: ' +
+      Boolean(ultima && ultima.inventario && ultima.inventario.some(function (t) { return t.name === 'Taladro DeWalt'; })));
+    note('herramientas guardadas antes: ' + window.__sembrado);
+    note('herramientas guardadas despues: ' + window.__tools().length);
+    note('la alta quedo en localStorage: ' +
+      window.__tools().some(function (t) { return t.name === 'Pinza Pelacables' && t.id; }));
+    note('la alta quedo duplicada: ' +
+      window.__tools().filter(function (t) { return t.name === 'Pinza Pelacables'; }).length);
 
     var after = userBubbles();
     note('llamadas a fetch: ' + window.__calls());
@@ -237,7 +270,7 @@ try {
 }
 server.close();
 
-console.log('escenario: la primera consulta falla y el usuario pulsa Reintentar\n');
+console.log('escenario: la primera consulta falla, el usuario pulsa Reintentar y el bot devuelve un alta\n');
 for (const line of log) console.log('  ' + line);
 
 const value = (label) => {
@@ -297,9 +330,31 @@ if (!/L\.O\.T\.U\.S\./.test(saludo)) {
   failures.push(`el saludo deberia nombrarse L.O.T.U.S., dice: "${saludo}"`);
 }
 
+// El inventario se manda en la consulta y lo devuelve el bot se persiste. Sin
+// esto el bot contesta de memoria y las altas se pierden al recargar.
+if (value('consultas con inventario:') !== 2) {
+  failures.push(`esperaba las 2 consultas con inventario, hubo ${value('consultas con inventario:')}`);
+}
+if (value('herramientas del inventario enviado:') !== 1) {
+  failures.push(`esperaba 1 herramienta en el inventario enviado, hubo ${value('herramientas del inventario enviado:')}`);
+}
+if (log.find((l) => l.startsWith('el inventario enviado trae la sembrada: '))?.slice(-4) !== 'true') {
+  failures.push('el inventario enviado no incluye la herramienta que esta en localStorage');
+}
+if (value('herramientas guardadas despues:') !== 2) {
+  failures.push(`esperaba 2 herramientas en localStorage tras el alta, hay ${value('herramientas guardadas despues:')}`);
+}
+if (log.find((l) => l.startsWith('la alta quedo en localStorage: '))?.slice(-4) !== 'true') {
+  failures.push('la herramienta que pidio agregar el bot no quedo guardada con id');
+}
+if (value('la alta quedo duplicada:') !== 1) {
+  failures.push(`la alta quedo duplicada ${value('la alta quedo duplicada:')} veces`);
+}
+
 console.log('');
 if (failures.length) {
   for (const f of failures) console.log('  FALLA: ' + f);
   process.exit(1);
 }
 console.log('  ok: el reintento no duplica la burbuja del usuario y el historial queda consistente');
+console.log('  ok: el chat envia el inventario de localStorage y persiste las altas que devuelve el bot');

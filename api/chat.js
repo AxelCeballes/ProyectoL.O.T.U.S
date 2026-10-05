@@ -103,16 +103,118 @@ function cleanContext(raw) {
   return parts.join(" ");
 }
 
+// ------------------------------------------------------------------
+// Inventario: lo manda el navegador, porque las herramientas viven en el
+// localStorage del cliente y el servidor no las ve. Sin esto el modelo
+// inventaba cantidades. Va recortado y con los caracteres de control fuera,
+// porque es texto que viene de una request.
+// ------------------------------------------------------------------
+const TOOL_STATUSES = new Set(["available", "in_use", "maintenance"]);
+const MAX_TOOLS_IN_CONTEXT = 60;
+const MAX_ALTAS = 20;
+
+function cleanToolName(value) {
+  return String(value ?? "")
+    .replace(/[\u0000-\u001f\u007f]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 120);
+}
+
+function cleanInventory(raw) {
+  if (!Array.isArray(raw)) return [];
+
+  const lines = [];
+  for (const item of raw.slice(0, MAX_TOOLS_IN_CONTEXT)) {
+    if (!item || typeof item !== "object") continue;
+    const name = cleanToolName(item.name);
+    if (!name) continue;
+    const category = cleanToolName(item.category) || "Sin categoría";
+    const status = TOOL_STATUSES.has(item.status) ? item.status : "available";
+    lines.push(`- ${name} | categoría: ${category} | estado: ${status}`);
+  }
+  if (!lines.length) return [];
+  return `\n\nInventario actual (${lines.length} herramienta(s)):\n${lines.join("\n")}`;
+}
+
+function sanitizeTools(raw) {
+  if (!Array.isArray(raw)) return [];
+
+  const out = [];
+  for (const item of raw.slice(0, MAX_ALTAS)) {
+    if (!item || typeof item !== "object") continue;
+    const name = cleanToolName(item.name);
+    if (!name) continue;
+    out.push({
+      name,
+      category: cleanToolName(item.category).slice(0, 80) || "Sin categoría",
+      status: TOOL_STATUSES.has(item.status) ? item.status : "available",
+    });
+  }
+  return out;
+}
+
+// ------------------------------------------------------------------
+// El modelo tiene que contestar JSON. Este parser no tira nunca: si el JSON
+// viene roto, con los Thinking de Gemini antepuesto o directamente envuelto en
+// un bloque de código, cae a texto plano. Perder el alta es molesto; perder la
+// respuesta deja al operario sin nada, así que el camino de escape es el
+// texto crudo.
+// ------------------------------------------------------------------
+function extractJson(text) {
+  const trimmed = text.trim();
+  const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  const candidate = fenced ? fenced[1].trim() : trimmed;
+
+  try {
+    return JSON.parse(candidate);
+  } catch {
+    // Falta abrir o cerrar: se recorta del primer { al último }.
+    const start = candidate.indexOf("{");
+    const end = candidate.lastIndexOf("}");
+    if (start === -1 || end <= start) return null;
+    try {
+      return JSON.parse(candidate.slice(start, end + 1));
+    } catch {
+      return null;
+    }
+  }
+}
+
+function parseReply(text) {
+  const parsed = extractJson(text);
+  if (!parsed || typeof parsed !== "object") {
+    return { reply: String(text ?? "").trim(), agregar: [] };
+  }
+
+  const reply = typeof parsed.reply === "string" ? parsed.reply.trim() : "";
+  return { reply, agregar: sanitizeTools(parsed.agregar) };
+}
+
 const SYSTEM_PROMPT = `Sos el asistente de ayuda de L.O.T.U.S., el sistema de un pañol industrial.
 Nunca digas "kiosco" ni ninguna otra palabra para nombrarlo. Llamalo siempre L.O.T.U.S., y si necesitás referirte a la pantalla donde está el operario, decí "la pantalla".
 El sistema tiene cuatro pantallas: (1) esperando la tarjeta NFC del operario, (2) menú del operario para elegir Retiro o Devolución, (3) escaneo del código de barras de la herramienta con la pistola láser, y (4) estado de herramientas con buscador y filtros.
 Ayudás al operario a entender el flujo, dónde está cada opción en pantalla y qué hacer si algo no responde.
 
 Respondé siempre en español rioplatense, con voseo, de forma breve y clara: máximo 4 o 5 oraciones.
+Si necesitás saludar, usá únicamente "Hola". Jamás uses "Bienvenido", "Bienvenida" ni otra fórmula con género: no sabés quién está del otro lado. Y saludá solo cuando corresponde: si la consulta es directa, como una cantidad o una búsqueda, respondé de entrada, sin "Hola" adelante.
 
-Importante sobre los datos: esta aplicación es una demostración. El inventario y las reparaciones son datos de ejemplo guardados en el navegador, no hay base de datos ni servidor de inventario. No afirmes que podés consultar movimientos, personal o herramientas reales, y no inventes datos que no estén en pantalla. Si te piden un dato real, decí dónde se ve en L.O.T.U.S.
+Inventario: vas a recibir el inventario actual, que es el real de esta pantalla. Es la única fuente de verdad: contá, buscá y compará contra esa lista, y cuando pregunten cuántas hay de algo, dá el número exacto. Si piden algo que no figura, decí que no está y ofrecé agregarlo.
 
-Si la consulta no tiene relación con L.O.T.U.S., decí amablemente que solo podés ayudar con el sistema.
+Altas de herramientas: podés agregar herramientas, para eso está el campo "agregar". Cuando el operario pida agregar una o más, hacelo. Reglas:
+- Máximo 20 por mensaje. Si piden más, agregá hasta 20 y decí en "reply" cuántas quedaron afuera. Si la cantidad es ambigua ("agregá 3 discos"), creá 3 registros, uno por unidad.
+- "status" solo puede ser "available", "in_use" o "maintenance". Si no lo dicen, usá "available".
+- "category" es texto libre y corto: "Eléctricas", "Neumáticas", "Manuales", "Medición", "Seguridad" o la que corresponda.
+- No agregues una herramienta que ya esté en el inventario por nombre.
+- Si solo preguntan o consultan, "agregar" va en null.
+
+Aclaración: los datos viven en el navegador de esta demo, no hay base de datos. Eso no te impide responder ni agregar: el inventario que te paso es exactamente lo que hay cargado. No inventes movimientos ni personal, y si te piden un dato que no está en la lista, decilo.
+
+Respondé siempre con un único objeto JSON, sin texto alrededor y sin bloques de código:
+{"reply": "lo que leés al operario", "agregar": [{"name": "...", "category": "...", "status": "available"}]}
+Si no hay que agregar nada, "agregar" va en null.
+
+Si la consulta no tiene relación con L.O.T.U.S., decí amablemente en "reply" que solo podés ayudar con el sistema.
 No inventes funciones que no conozcas.`;
 
 // ------------------------------------------------------------------
@@ -177,7 +279,33 @@ function geminiRequest(apiKey, systemText, messages) {
         // nada, así que mandarlo solo agrega una forma de que el canal se rompa.
         // Si se cambia a un modelo que razona por defecto, puede pasar que la
         // respuesta visible se corte; el log deja ver el finishReason.
-        generationConfig: { maxOutputTokens: MAX_TOKENS },
+        generationConfig: {
+      maxOutputTokens: MAX_TOKENS,
+      // Obliga a la forma del JSON en vez de confiar en que el modelo obedezca
+      // el prompt. Con responseSchema no puede devolver un bloque de código ni
+      // un "agregar" con un estado inventado.
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: "object",
+        required: ["reply"],
+        properties: {
+          reply: { type: "string" },
+          agregar: {
+            type: "array",
+            maxItems: MAX_ALTAS,
+            items: {
+              type: "object",
+              required: ["name", "category", "status"],
+              properties: {
+                name: { type: "string" },
+                category: { type: "string" },
+                status: { type: "string", enum: ["available", "in_use", "maintenance"] },
+              },
+            },
+          },
+        },
+      },
+    },
       }),
     },
   };
@@ -295,7 +423,7 @@ module.exports = async function handler(req, res) {
     });
   }
 
-  const { message, history, context } = req.body ?? {};
+  const { message, history, context, inventario } = req.body ?? {};
   if (typeof message !== "string" || !message.trim()) {
     return sendJson(res, 400, { error: "Escribí una consulta antes de enviarla." });
   }
@@ -311,7 +439,14 @@ module.exports = async function handler(req, res) {
   }
 
   const screenContext = cleanContext(context);
-  const systemText = screenContext ? `${SYSTEM_PROMPT}\n\nContexto de L.O.T.U.S. ahora mismo:\n${screenContext}` : SYSTEM_PROMPT;
+  const inventoryContext = cleanInventory(inventario);
+  const systemText = [
+    SYSTEM_PROMPT,
+    screenContext ? `Contexto de L.O.T.U.S. ahora mismo:\n${screenContext}` : "",
+    inventoryContext,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
   const messages = [
     ...cleanHistory(history),
     { role: "user", content: message.trim().slice(0, MAX_MESSAGE_LENGTH) },
@@ -347,9 +482,9 @@ module.exports = async function handler(req, res) {
     }
 
     const data = await response.json();
-    const { text: reply, finishReason } = target.parse(data);
+    const { text: rawText, finishReason } = target.parse(data);
 
-    if (!reply) {
+    if (!rawText) {
       console.error(
         `[chat] ${target.name} no devolvió texto. finishReason=${finishReason} ` +
           `model=${request.model} usage=${JSON.stringify(data.usageMetadata ?? data.usage ?? {})}`
@@ -357,7 +492,14 @@ module.exports = async function handler(req, res) {
       return sendJson(res, 502, { error: "El asistente no devolvió una respuesta. Probá de nuevo." });
     }
 
-    return sendJson(res, 200, { reply });
+    // Se le pidió JSON. Si no viene, se muestra el texto crudo como respuesta: es
+    // preferible una respuesta sin altas a dejar al operario sin nada.
+    const parsed = parseReply(rawText);
+    if (!parsed.reply.trim()) {
+      return sendJson(res, 502, { error: "El asistente no devolvió una respuesta. Probá de nuevo." });
+    }
+
+    return sendJson(res, 200, { reply: parsed.reply, agregar: parsed.agregar });
   } catch (error) {
     const timedOut = error?.name === "TimeoutError" || error?.name === "AbortError";
     console.error(`[chat] falló la consulta${timedOut ? " por timeout" : ""}:`, error);

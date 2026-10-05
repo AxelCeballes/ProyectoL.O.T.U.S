@@ -808,6 +808,14 @@
       bubble.appendChild(button);
     }
 
+// El servidor no ve el inventario: vive en este navegador. Sin esto la
+    // pregunta "cuantas moladoras hay" la responde inventando.
+    async function inventarioParaElChat() {
+      const puente = window.__LOTUS_INVENTARIO__;
+      if (!puente) return [];
+      return puente.cargar();
+    }
+
     async function sendChatMessage(event) {
       event.preventDefault();
       const message = chatInput.value.trim();
@@ -829,6 +837,7 @@
             // turno pendiente.
             history: chatHistory.slice(-maxChatHistory),
             context: currentChatContext(),
+            inventario: await inventarioParaElChat(),
           }),
         });
 
@@ -845,6 +854,29 @@
           chatHistory.splice(0, chatHistory.length - maxChatHistory);
         }
         loadingMessage.textContent = data.reply;
+
+        // Altas pedidas en el mensaje. Se cuentan aunque no se haya escrito
+        // nada en el chat: si el modelo devolvio una herramienta, quedo.
+        if (Array.isArray(data.agregar) && data.agregar.length) {
+          const puente = window.__LOTUS_INVENTARIO__;
+          const { agregadas, rechazadas } = puente
+            ? await puente.aplicar(data.agregar)
+            : { agregadas: [], rechazadas: ['no se pudo acceder al inventario'] };
+
+          const detalle = agregadas.map((t) => `${t.name} (${t.category})`).join(', ');
+          if (agregadas.length) {
+            appendChatMessage(
+              `Agregué al inventario: ${detalle}.`,
+              'assistant'
+            );
+          }
+          if (rechazadas.length) {
+            appendChatMessage(
+              `No pude agregar ${rechazadas.length > 1 ? 'estas herramientas' : 'esta herramienta'}: ${rechazadas.join('; ')}`,
+              'assistant'
+            );
+          }
+        }
       } catch (error) {
         showChatError(
           loadingMessage,
@@ -1370,8 +1402,58 @@
   </script>
   <script type="module">
     import { mountAdminPanel } from './admin-panel.js';
+    import { listTools, addTool } from './repairs-store.js';
 
     mountAdminPanel();
+
+    // ---- Altas de herramientas que pide el asistente por el chat ----
+    // El inventario vive en este navegador, asi que el servidor no puede
+    // escribirlo: devuelve la herramienta cargada y la aplicamos aca. Por eso
+    // no se pide la contrasena del panel: es la misma demo y el mismo dato.
+    // El ID lo genera el modelo cuando lo manda; si no, se arma uno, porque
+    // addTool lo exige y no puede repetirse.
+    const nuevoId = () =>
+      'LOTUS-' + Math.floor(10000 + Math.random() * 89999);
+
+    async function aplicarAltas(lista) {
+      const agregadas = [];
+      const rechazadas = [];
+
+      for (const item of Array.isArray(lista) ? lista.slice(0, 3) : []) {
+        const name = String(item?.name ?? '').trim();
+        if (!name) continue;
+        try {
+          agregadas.push(await addTool({
+            id: String(item?.id ?? '').trim() || nuevoId(),
+            name,
+            category: String(item?.category ?? '').trim() || 'Sin categoría',
+            status: item?.status ?? 'available',
+          }));
+        } catch (error) {
+          rechazadas.push(error.message);
+        }
+      }
+      return { agregadas, rechazadas };
+    }
+
+    // El chat vive en un script clasico, asi que se le expone lo minimo.
+    window.__LOTUS_INVENTARIO__ = {
+      async cargar() {
+        try {
+          const tools = await listTools();
+          // Sin reparaciones ni IDs: solo lo que el modelo necesita para
+          // responder, y lo mas chico posible para no inflar la request.
+          return tools.map((t) => ({
+            name: t.name,
+            category: t.category,
+            status: t.status,
+          }));
+        } catch {
+          return [];
+        }
+      },
+      aplicar: aplicarAltas,
+    };
   </script>
 </body>
 </html>

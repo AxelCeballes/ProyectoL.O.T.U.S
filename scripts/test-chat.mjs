@@ -141,6 +141,107 @@ async function suiteCompartida() {
     /sos el asistente de ayuda de L\.O\.T\.U\.S\./i.test(SYSTEM_PROMPT)
   );
 
+  section(`${providerName}: 0b. Inventario y altas`);
+
+  // El inventario llega desde el navegador porque las herramientas viven en el
+  // localStorage del cliente. Si no viaja, el modelo inventa cantidades.
+  check(
+    'el prompt manda JSON con reply y agregar',
+    /\{\s*"reply"/.test(SYSTEM_PROMPT) && /"agregar"/.test(SYSTEM_PROMPT)
+  );
+  check(
+    'el prompt prohibe los saludos con genero',
+    /"Hola"/.test(SYSTEM_PROMPT) && /género/i.test(SYSTEM_PROMPT)
+  );
+  check('el prompt acota las altas', /máximo 20/i.test(SYSTEM_PROMPT));
+
+  const invBody = (inventario) => ({ message: 'cuantas amoladoras hay', inventario });
+
+  stubFetch(async () => okResponse('ok'));
+  await call({
+    body: invBody([
+      { name: 'Amoladora Angular DeWalt', category: 'Eléctricas', status: 'maintenance' },
+      { name: 'Amoladora Inalámbrica Bosch', category: 'Eléctricas', status: 'available' },
+      { name: 'Llave de Impacto Neumática', category: 'Neumáticas', status: 'available' },
+    ]),
+  });
+  const invSystem = systemText();
+  check(
+    'el inventario llega al prompt con nombre y estado',
+    invSystem.includes('Amoladora Angular') && invSystem.includes('maintenance')
+  );
+  check('el prompt aclara cuántas herramientas hay', /Inventario actual \(3 herramienta/.test(invSystem));
+
+  // Un estado fuera de la lista blanca no debe llegar al modelo.
+  stubFetch(async () => okResponse('ok'));
+  await call({
+    body: invBody([
+      { name: 'Inventada', category: 'X', status: 'inventado' },
+      { name: '   ', category: 'Y', status: 'available' },
+      { name: 'Real', category: 'Z', status: 'available' },
+    ]),
+  });
+  const saneado = systemText();
+  check('un estado inválido se normaliza', !saneado.includes('inventado'));
+  check('una herramienta sin nombre se descarta', !saneado.includes('Sin categoría'));
+  check('los nombres se limpian', saneado.includes('- Real |'));
+
+  stubFetch(async () =>
+    okResponse(
+      JSON.stringify({
+        reply: 'Listo, agregué los discos.',
+        agregar: [
+          { name: 'Disco de Corte 4 1/2"', category: 'Consumibles', status: 'available' },
+          { name: 'Disco de Corte 7"', category: 'Consumibles', status: 'borrado' },
+          { name: '', category: 'Basura', status: 'available' },
+        ],
+      })
+    )
+  );
+  const altaRes = await call({ body: { message: 'agrega 2 discos de corte' } });
+  check('devuelve las altas pedidas', altaRes.body.agregar?.length === 2, JSON.stringify(altaRes.body.agregar));
+  check('sanea el estado de las altas', altaRes.body.agregar?.[1]?.status === 'available');
+  check('descarta el alta sin nombre', !altaRes.body.agregar?.some((t) => t.name === ''));
+
+  // El tope del prompt y el del código no pueden desincronizarse: si el prompt
+  // promete 20 y el código corta en 3, el operario pierde altas sin avisar.
+  const muchas = Array.from({ length: 40 }, (_, i) => ({
+    name: `Herramienta ${i}`,
+    category: 'Eléctricas',
+    status: 'available',
+  }));
+  stubFetch(async () => okResponse(JSON.stringify({ reply: 'Listo.', agregar: muchas })));
+  const topeRes = await call({ body: { message: 'agrega 40 herramientas' } });
+  check('corta las altas al tope aunque manden más', topeRes.body.agregar?.length === 20, `volvieron ${topeRes.body.agregar?.length}`);
+
+  // Un lote chico tiene que pasar entero: es el caso de "agregá 3 discos".
+  stubFetch(async () =>
+    okResponse(
+      JSON.stringify({
+        reply: 'Listo.',
+        agregar: [1, 2, 3].map((n) => ({ name: `Disco ${n}`, category: 'Consumibles', status: 'available' })),
+      })
+    )
+  );
+  const loteRes = await call({ body: { message: 'agrega 3 discos de corte' } });
+  check('un lote de 3 se devuelve entero', loteRes.body.agregar?.length === 3, `volvieron ${loteRes.body.agregar?.length}`);
+
+  // Si el modelo no devuelve JSON, se muestra el texto crudo: es preferible una
+  // respuesta sin altas a dejar al operario sin nada.
+  stubFetch(async () => okResponse('Acá tenés dos amoladoras.'));
+  const plano = await call({ body: { message: 'hola' } });
+  check('si no hay JSON, responde con el texto crudo', plano.body.reply === 'Acá tenés dos amoladoras.');
+  check('si no hay JSON, no inventa altas', plano.body.agregar?.length === 0);
+
+  // JSON truncado: tampoco puede romper el chat.
+  stubFetch(async () => okResponse('{"reply": "hola", "agregar": ['));
+  const roto = await call({ body: { message: 'hola' } });
+  check(
+    'un JSON truncado no rompe el chat',
+    typeof roto.body.reply === 'string' && roto.body.reply.length > 0,
+    `status=${roto.statusCode} body=${JSON.stringify(roto.body)}`
+  );
+
   section(`${providerName}: 1. Método y configuración`);
   stubFetch(okResponse);
   check('GET devuelve 405', (await call({ method: 'GET' })).statusCode === 405);
