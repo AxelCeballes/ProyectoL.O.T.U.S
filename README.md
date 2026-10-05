@@ -53,6 +53,7 @@ npm install
 npm run build   # recompila assets/lotus.css
 npm run dev     # recompila al guardar
 npm run check   # build + cobertura de clases + sintaxis + paridad con el CDN + tests del bot
+npm run test    # tests del bot: api/chat.js con la API simulada y el chat en un navegador real
 ```
 
 Al agregar clases nuevas hay que recompilar y commitear `assets/lotus.css`; en Vercel el build se ejecuta en cada deploy (`vercel.json`).
@@ -92,6 +93,8 @@ Variables de entorno (ver `.env.example`):
 | `CHAT_RATE_LIMIT` | no | `8` | Consultas por IP cada 60 s; `0` desactiva. |
 
 El rate limit vive en memoria de la función, así que es por instancia y no sustituye a un límite en el borde.
+
+`scripts/test-chat-ui.mjs` prueba el frontend en Chrome de verdad: sustituye `fetch`, hace fallar la primera consulta, pulsa el botón «Reintentar» que genera el propio código y cuenta lo que queda en el DOM. Cubre lo que `test-chat.mjs` no alcanza, porque aquel solo prueba la función serverless. Es la prueba que sostiene el fix del reintento: quitando la línea que retira la burbuja del usuario, la prueba falla con dos burbujas en pantalla.
 
 ## PARTICIPANTES
 
