@@ -38,19 +38,11 @@ Los datos que aparecen son ficticios. La página no registra movimientos reales 
 4. Use «Estado de herramientas» para consultar el inventario de ejemplo y filtrar por estado o nombre.
 5. Use el botón «Sonidos» del encabezado para probar individualmente los sintetizadores de audio.
 
-## Asistente de ayuda
-
-El chat de ayuda usa una función de Vercel (`api/chat.js`) que consulta la API de Anthropic. Para habilitarlo, configure `ANTHROPIC_API_KEY` como variable de entorno secreta en la configuración del proyecto de Vercel y vuelva a desplegar. Nunca coloque la clave en `index.html` ni la suba al repositorio.
-
-Los mensajes enviados al chat se procesan mediante Anthropic. No envíe datos personales ni información confidencial. El asistente no tiene acceso a datos reales: esta aplicación es una demo y muestra información ficticia.
-
 ## Panel de administración y reparaciones
 
 El botón «Panel Admin» abre el inventario de ejemplo y permite consultar y registrar reparaciones. En modo local, los cambios se guardan en `localStorage` del navegador y solo existen en ese navegador. No son datos compartidos ni un registro real.
 
 `repairs-router.js` es una opción independiente para un servidor Express propio; no se usa en el despliegue estático de Vercel. Para persistencia compartida en producción, conecte el panel a una base de datos y agregue autenticación de administrador antes de habilitar escrituras.
-
-## PARTICIPANTES
 
 -AXEL CEBALLES
 -FEDERICO LERA
