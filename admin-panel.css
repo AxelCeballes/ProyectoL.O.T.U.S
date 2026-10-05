@@ -180,7 +180,9 @@
 .lap__toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-bottom: 18px; }
 .lap__search,
 .lap-form input,
-.lap-form textarea {
+.lap-form textarea,
+.lap-add input,
+.lap-add select {
   font: inherit;
   font-size: 14px;
   color: var(--lap-text);
@@ -192,8 +194,21 @@
 .lap__search { flex: 1; min-width: 220px; max-width: 380px; padding: 10px 12px; }
 .lap__search:focus,
 .lap-form input:focus,
-.lap-form textarea:focus { border-color: var(--lap-cyan); box-shadow: 0 0 10px rgba(0, 240, 255, 0.3); }
+.lap-form textarea:focus,
+.lap-add input:focus,
+.lap-add select:focus { border-color: var(--lap-cyan); box-shadow: 0 0 10px rgba(0, 240, 255, 0.3); }
 .lap__meta { font-size: 13px; color: var(--lap-muted); }
+
+.lap-add { margin: 0 0 18px; border: 1px solid var(--lap-line); border-radius: 10px; }
+.lap-add summary { padding: 12px 14px; color: var(--lap-cyan); font-size: 14px; cursor: pointer; }
+.lap-add form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 4px 14px 16px; }
+.lap-add label { display: flex; flex-direction: column; gap: 5px; color: var(--lap-muted); font-size: 13px; }
+.lap-add input,
+.lap-add select { width: 100%; min-width: 0; padding: 9px 11px; font: inherit; font-size: 14px; }
+.lap-add select { color-scheme: dark; }
+.lap-add__error { grid-column: 1 / -1; margin: 0; color: #ff8a8a; font-size: 13px; }
+.lap-add__error[hidden] { display: none; }
+.lap-add .lap-btn { grid-column: 1 / -1; }
 
 .lap__state { margin: 28px 0; color: var(--lap-muted); }
 .lap__state--error { color: #ff8a8a; }
@@ -247,6 +262,18 @@
 }
 .lap-count:hover { background: rgba(255, 46, 151, 0.25); box-shadow: 0 0 10px rgba(255, 46, 151, 0.5); }
 .lap-count--zero { color: var(--lap-muted); background: none; border-color: var(--lap-line); }
+
+.lap-delete-btn {
+  padding: 5px 9px;
+  color: #ff8a8a;
+  background: rgba(255, 80, 80, 0.08);
+  border: 1px solid rgba(255, 138, 138, 0.55);
+  border-radius: 6px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.lap-delete-btn:hover { background: rgba(255, 80, 80, 0.2); }
 
 /* ---------- Cajón de historial ---------- */
 .lap__drawer {
@@ -341,6 +368,7 @@
 @media (max-width: 640px) {
   .lap-launcher span { display: none; }
   .lap-launcher { padding: 8px; }
+  .lap-add form { grid-template-columns: 1fr; }
 }
 
 @media (prefers-reduced-motion: reduce) {

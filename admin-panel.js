@@ -5,6 +5,8 @@
 import {
   configureStore,
   listTools,
+  addTool,
+  deleteTool,
   registerRepair,
   repairCount,
   sortedRepairs,
@@ -131,7 +133,7 @@ export function mountAdminPanel({ store } = {}) {
     return `
       <table class="lap-table">
         <thead>
-          <tr><th>ID</th><th>Herramienta</th><th>Categoría</th><th>Estado</th><th>Reparaciones</th><th>Última</th></tr>
+          <tr><th>ID</th><th>Herramienta</th><th>Categoría</th><th>Estado</th><th>Reparaciones</th><th>Última</th><th>Acciones</th></tr>
         </thead>
         <tbody>
           ${rows
@@ -148,6 +150,10 @@ export function mountAdminPanel({ store } = {}) {
                     aria-label="Ver historial de ${esc(t.name)}: ${n} reparaciones">${n}</button>
                 </td>
                 <td>${fmtDate(lastRepairDate(t))}</td>
+                <td>
+                  <button type="button" class="lap-delete-btn" data-action="delete-tool" data-id="${esc(t.id)}"
+                    aria-label="Eliminar ${esc(t.name)}">Eliminar</button>
+                </td>
               </tr>`;
             })
             .join("")}
@@ -163,6 +169,29 @@ export function mountAdminPanel({ store } = {}) {
           value="${esc(state.query)}" aria-label="Buscar herramienta" />
         <span class="lap__meta">${state.tools.length} herramientas · ${total} reparaciones</span>
       </div>
+      <details class="lap-add">
+        <summary>Agregar herramienta</summary>
+        <form data-form="tool" novalidate>
+          <label>ID
+            <input type="text" name="id" maxlength="64" required placeholder="Ej: LOTUS-12345" />
+          </label>
+          <label>Nombre
+            <input type="text" name="name" maxlength="120" required placeholder="Nombre de la herramienta" />
+          </label>
+          <label>Categoría
+            <input type="text" name="category" maxlength="80" placeholder="Ej: Eléctricas" />
+          </label>
+          <label>Estado inicial
+            <select name="status">
+              <option value="available">Disponible</option>
+              <option value="in_use">En uso</option>
+              <option value="maintenance">En mantenimiento</option>
+            </select>
+          </label>
+          <p class="lap-add__error" role="alert" hidden></p>
+          <button type="submit" class="lap-btn">Guardar herramienta</button>
+        </form>
+      </details>
       <div class="lap__tablewrap" id="lap-table">${tableHTML()}</div>`;
   }
 
@@ -307,6 +336,18 @@ export function mountAdminPanel({ store } = {}) {
     launcher.focus();
   }
 
+  async function removeTool(toolId) {
+    if (!window.confirm(`¿Eliminar la herramienta ${toolId} y todo su historial de reparaciones?`)) return;
+    try {
+      await deleteTool(toolId);
+      if (state.selectedId === toolId) state.selectedId = null;
+      await refresh();
+    } catch (err) {
+      state.error = err.message || "No se pudo eliminar la herramienta.";
+      render();
+    }
+  }
+
   launcher.addEventListener("click", open);
   authDialog.querySelector(".lap-auth__cancel").addEventListener("click", () => authDialog.close());
   authDialog.addEventListener("close", () => {
@@ -343,6 +384,9 @@ export function mountAdminPanel({ store } = {}) {
         render();
         drawerEl.querySelector("[data-action=close-drawer]")?.focus();
         break;
+      case "delete-tool":
+        removeTool(el.dataset.id);
+        break;
       case "close-drawer":
         state.selectedId = null;
         render();
@@ -364,6 +408,33 @@ export function mountAdminPanel({ store } = {}) {
   });
 
   root.addEventListener("submit", async (e) => {
+    const toolForm = e.target.closest("[data-form=tool]");
+    if (toolForm) {
+      e.preventDefault();
+      const errorEl = toolForm.querySelector(".lap-add__error");
+      const submitBtn = toolForm.querySelector("button[type=submit]");
+      errorEl.hidden = true;
+      submitBtn.disabled = true;
+
+      const formData = new FormData(toolForm);
+      try {
+        await addTool({
+          id: formData.get("id"),
+          name: formData.get("name"),
+          category: formData.get("category"),
+          status: formData.get("status"),
+        });
+        state.query = "";
+        await refresh();
+        root.querySelector(".lap-add").open = false;
+      } catch (err) {
+        errorEl.textContent = err.message || "No se pudo guardar la herramienta.";
+        errorEl.hidden = false;
+        submitBtn.disabled = false;
+      }
+      return;
+    }
+
     const form = e.target.closest("[data-form=repair]");
     if (!form) return;
     e.preventDefault();

@@ -147,6 +147,50 @@ export async function listTools() {
   return readLocal();
 }
 
+function validateTool(input = {}, tools = []) {
+  const id = String(input.id ?? "").trim();
+  const name = String(input.name ?? "").trim();
+  const category = String(input.category ?? "").trim();
+  const status = String(input.status ?? "available");
+
+  if (!id || id.length > 64) throw new Error("El ID es obligatorio y no puede superar los 64 caracteres.");
+  if (tools.some((tool) => String(tool.id).toLowerCase() === id.toLowerCase())) {
+    throw new Error("Ya existe una herramienta con ese ID.");
+  }
+  if (!name || name.length > 120) throw new Error("El nombre es obligatorio y no puede superar los 120 caracteres.");
+  if (category.length > 80) throw new Error("La categoría no puede superar los 80 caracteres.");
+  if (!["available", "in_use", "maintenance"].includes(status)) {
+    throw new Error("El estado de la herramienta no es válido.");
+  }
+
+  return { id, name, category, status, repairs: [] };
+}
+
+export async function addTool(input) {
+  if (config.mode === "api") {
+    return api("", { method: "POST", body: JSON.stringify(input) });
+  }
+
+  const tools = readLocal();
+  const tool = validateTool(input, tools);
+  tools.push(tool);
+  writeLocal(tools);
+  return tool;
+}
+
+export async function deleteTool(toolId) {
+  if (config.mode === "api") {
+    return api(`/${encodeURIComponent(toolId)}`, { method: "DELETE" });
+  }
+
+  const tools = readLocal();
+  const index = tools.findIndex((tool) => tool.id === toolId);
+  if (index === -1) throw new Error("La herramienta no existe.");
+  const [deleted] = tools.splice(index, 1);
+  writeLocal(tools);
+  return deleted;
+}
+
 /**
  * Registra una reparación y suma 1 al contador (por derivación).
  * Si la herramienta estaba "En mantenimiento" y markAvailable es true,

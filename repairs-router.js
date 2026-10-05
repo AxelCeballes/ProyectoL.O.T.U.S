@@ -65,6 +65,55 @@ repairsRouter.get("/", async (_req, res) => {
   }
 });
 
+// POST /api/tools → agrega una herramienta al inventario
+repairsRouter.post("/", async (req, res) => {
+  const { id, name, category = "", status = "available" } = req.body ?? {};
+  const cleanId = String(id ?? "").trim();
+  const cleanName = String(name ?? "").trim();
+  const cleanCategory = String(category ?? "").trim();
+
+  if (!cleanId || cleanId.length > 64) {
+    return res.status(400).json({ error: "El ID es obligatorio y no puede superar los 64 caracteres." });
+  }
+  if (!cleanName || cleanName.length > 120) {
+    return res.status(400).json({ error: "El nombre es obligatorio y no puede superar los 120 caracteres." });
+  }
+  if (cleanCategory.length > 80 || !["available", "in_use", "maintenance"].includes(status)) {
+    return res.status(400).json({ error: "La categoría o el estado no son válidos." });
+  }
+
+  try {
+    const tools = await readTools();
+    if (tools.some((tool) => String(tool.id).toLowerCase() === cleanId.toLowerCase())) {
+      return res.status(409).json({ error: "Ya existe una herramienta con ese ID." });
+    }
+
+    const tool = { id: cleanId, name: cleanName, category: cleanCategory, status, repairs: [] };
+    tools.push(tool);
+    await writeTools(tools);
+    res.status(201).json(tool);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "No se pudo agregar la herramienta." });
+  }
+});
+
+// DELETE /api/tools/:id → elimina la herramienta y su historial
+repairsRouter.delete("/:id", async (req, res) => {
+  try {
+    const tools = await readTools();
+    const index = tools.findIndex((tool) => tool.id === req.params.id);
+    if (index === -1) return res.status(404).json({ error: "La herramienta no existe." });
+
+    const [deleted] = tools.splice(index, 1);
+    await writeTools(tools);
+    res.json(deleted);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "No se pudo eliminar la herramienta." });
+  }
+});
+
 // POST /api/tools/:id/repairs → registra una reparación
 repairsRouter.post("/:id/repairs", async (req, res) => {
   const { date, reason, technician = "", notes = "", markAvailable = true } = req.body ?? {};
