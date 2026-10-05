@@ -9,49 +9,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <!-- Tailwind CSS via CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            brand: {
-              navy: '#1A2B42',
-              'navy-light': '#253D5C',
-              'navy-dark': '#0F1A28',
-              'navy-subtle': '#E9EEF4',
-              bg: '#F8F9FA'
-            }
-          },
-          fontFamily: {
-            sans: ['Inter', 'sans-serif'],
-            display: ['Montserrat', 'sans-serif']
-          },
-          animation: {
-            'pulse-soft': 'pulseSoft 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-            'laser-sweep': 'laserSweep 2s ease-in-out infinite',
-            'ring-wave': 'ringWave 3s cubic-bezier(0, 0.2, 0.8, 1) infinite',
-          },
-          keyframes: {
-            pulseSoft: {
-              '0%, 100%': { transform: 'scale(1)', opacity: '1' },
-              '50%': { transform: 'scale(1.05)', opacity: '0.85' },
-            },
-            laserSweep: {
-              '0%, 100%': { top: '5%' },
-              '50%': { top: '92%' },
-            },
-            ringWave: {
-              '0%': { transform: 'scale(0.85)', opacity: '0.9' },
-              '70%': { transform: 'scale(1.6)', opacity: '0' },
-              '100%': { transform: 'scale(1.6)', opacity: '0' }
-            }
-          }
-        }
-      }
-    }
-  </script>
+  <link rel="stylesheet" href="admin-panel.css">
+  <!-- Tailwind CSS compilado (npm run build). Los design tokens viven en src/tailwind.css -->
+  <link rel="stylesheet" href="assets/lotus.css">
   <style>
     /* NO TQOUEN ACA PORFA */
     body {
@@ -147,14 +107,11 @@
 </head>
 <body class="h-full flex flex-col font-sans bg-brand-bg text-brand-navy antialiased overflow-hidden selection:bg-brand-navy selection:text-white">
 
-  <div id="introScreen" class="fixed inset-0 z-50 flex items-center justify-center bg-brand-navy" role="region" aria-label="Introducción de L.O.T.U.S.">
-    <video id="introVideo" class="h-full w-full object-cover" autoplay muted playsinline preload="auto" aria-label="Video de introducción de L.O.T.U.S.">
+  <div id="introScreen" class="fixed inset-0 z-50 flex items-center justify-center bg-white" role="region" aria-label="Introducción de L.O.T.U.S.">
+    <video id="introVideo" class="h-full w-full object-contain" autoplay muted playsinline preload="auto" aria-label="Video de introducción de L.O.T.U.S.">
       <source src="assets/lotus_solutions_florecimiento_lento.mp4" type="video/mp4">
       Tu navegador no puede reproducir este video.
     </video>
-    <button id="skipIntroBtn" type="button" class="absolute bottom-6 right-6 rounded-lg bg-black/60 px-4 py-2 text-sm font-semibold text-white transition hover:bg-black/80 focus:outline-none focus:ring-2 focus:ring-white">
-      Omitir introducción
-    </button>
   </div>
 
   <!-- ========================================== -->
@@ -167,14 +124,14 @@
     </div>
 
     <!-- Indicadores de Estado de Terminal y Reloj -->
-    <div class="flex items-center gap-6 text-sm">
+    <div class="flex items-center gap-1 sm:gap-6 text-sm">
       <div class="hidden md:flex items-center gap-2 px-3 py-1 bg-slate-100 rounded-full text-slate-600 text-xs font-medium">
         <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-        <span>Terminal #04 · Pañol Central</span>
+        <span>Pañol Central</span>
       </div>
 
       <!-- Reloj en tiempo real -->
-      <div class="text-right">
+      <div class="text-right max-[360px]:hidden">
         <div id="liveClock" class="font-mono font-bold text-base text-brand-navy">12:00:00</div>
         <div id="liveDate" class="text-[11px] text-slate-500 font-medium capitalize">Miércoles, 30 de Septiembre</div>
       </div>
@@ -790,7 +747,6 @@
     const emptyToolResults = document.getElementById('emptyToolResults');
     const introScreen = document.getElementById('introScreen');
     const introVideo = document.getElementById('introVideo');
-    const skipIntroBtn = document.getElementById('skipIntroBtn');
     const chatPanel = document.getElementById('chatPanel');
     const toggleChatBtn = document.getElementById('toggleChatBtn');
     const closeChatBtn = document.getElementById('closeChatBtn');
@@ -821,13 +777,40 @@
       if (isOpen) chatInput.focus();
     }
 
+    // El servidor valida estos valores contra una lista blanca: son datos de
+    // pantalla, no información de negocio.
+    function currentChatContext() {
+      return {
+        screen: state.currentScreen,
+        operation: state.currentScreen === 3 ? state.currentOperation : undefined,
+      };
+    }
+
+    function showChatError(bubble, text, retry) {
+      bubble.className = 'max-w-[85%] rounded-2xl rounded-tl-sm border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700';
+      bubble.textContent = text;
+      if (!retry) return;
+
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'mt-2 rounded-lg bg-brand-navy px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-navy-light active:scale-95 cursor-pointer';
+      button.textContent = 'Reintentar';
+      button.addEventListener('click', () => {
+        bubble.remove();
+        button.remove();
+        chatInput.value = retry;
+        chatForm.requestSubmit();
+      });
+      bubble.appendChild(document.createElement('br'));
+      bubble.appendChild(button);
+    }
+
     async function sendChatMessage(event) {
       event.preventDefault();
       const message = chatInput.value.trim();
       if (!message || sendChatBtn.disabled) return;
 
       appendChatMessage(message, 'user');
-      chatHistory.push({ role: 'user', content: message });
       chatInput.value = '';
       sendChatBtn.disabled = true;
       const loadingMessage = appendChatMessage('Estoy pensando...', 'assistant');
@@ -836,9 +819,17 @@
         const response = await fetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message, history: chatHistory.slice(-maxChatHistory - 1, -1) }),
+          body: JSON.stringify({
+            message,
+            // El historial se arma recién con lo que el servidor confirmó:
+            // si esta consulta falla, el siguiente intento no arrastra un
+            // turno pendiente.
+            history: chatHistory.slice(-maxChatHistory),
+            context: currentChatContext(),
+          }),
         });
-        const data = await response.json();
+
+        const data = await response.json().catch(() => ({}));
         if (!response.ok) {
           throw new Error(data.error || 'No se pudo obtener una respuesta.');
         }
@@ -846,16 +837,19 @@
           throw new Error('El asistente devolvió una respuesta vacía.');
         }
 
-        chatHistory.push({ role: 'assistant', content: data.reply });
+        chatHistory.push({ role: 'user', content: message }, { role: 'assistant', content: data.reply });
         if (chatHistory.length > maxChatHistory) {
           chatHistory.splice(0, chatHistory.length - maxChatHistory);
         }
         loadingMessage.textContent = data.reply;
       } catch (error) {
-        chatHistory.pop();
-        loadingMessage.textContent = error instanceof TypeError
-          ? 'No se pudo conectar con el asistente. Probá de nuevo más tarde.'
-          : error.message;
+        showChatError(
+          loadingMessage,
+          error instanceof TypeError
+            ? 'No se pudo conectar con el asistente. Revisá la conexión e intentá de nuevo.'
+            : error.message,
+          message
+        );
       } finally {
         sendChatBtn.disabled = false;
         chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -1153,6 +1147,13 @@
         }
       }
       if (e.key === 'Enter') {
+        if (
+          e.target !== nfcInput &&
+          e.target !== barcodeInput &&
+          e.target.closest('button, a, input, textarea, select, [contenteditable="true"], .lap')
+        ) {
+          return;
+        }
         if (chatPanel.contains(e.target)) {
           return;
         } else if (state.currentScreen === 1) {
@@ -1349,11 +1350,15 @@
 
     // Inicializar al cargar
     window.addEventListener('DOMContentLoaded', () => {
-      skipIntroBtn.addEventListener('click', finishIntro);
       introVideo.addEventListener('ended', finishIntro);
       introVideo.addEventListener('error', finishIntro);
       maintainFocus();
     });
+  </script>
+  <script type="module">
+    import { mountAdminPanel } from './admin-panel.js';
+
+    mountAdminPanel();
   </script>
 </body>
 </html>

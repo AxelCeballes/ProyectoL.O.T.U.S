@@ -44,6 +44,12 @@ El chat de ayuda usa una función de Vercel (`api/chat.js`) que consulta la API 
 
 Los mensajes enviados al chat se procesan mediante Anthropic. No envíe datos personales ni información confidencial. El asistente no tiene acceso a datos reales: esta aplicación es una demo y muestra información ficticia.
 
+## Panel de administración y reparaciones
+
+El botón «Panel Admin» abre el inventario de ejemplo y permite consultar y registrar reparaciones. En modo local, los cambios se guardan en `localStorage` del navegador y solo existen en ese navegador. No son datos compartidos ni un registro real.
+
+`repairs-router.js` es una opción independiente para un servidor Express propio; no se usa en el despliegue estático de Vercel. Para persistencia compartida en producción, conecte el panel a una base de datos y agregue autenticación de administrador antes de habilitar escrituras.
+
 ## PARTICIPANTES
 
 -AXEL CEBALLES

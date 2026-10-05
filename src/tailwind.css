@@ -1,0 +1,59 @@
+@import "tailwindcss";
+
+/* Design tokens de L.O.T.U.S. — antes vivían en el <script> de tailwind.config
+   que se cargaba desde el CDN. Ahora se compilan a un CSS estático. */
+@theme {
+  --color-brand-navy: #1a2b42;
+  --color-brand-navy-light: #253d5c;
+  --color-brand-navy-dark: #0f1a28;
+  --color-brand-navy-subtle: #e9eef4;
+  --color-brand-bg: #f8f9fa;
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Montserrat", ui-sans-serif, system-ui, sans-serif;
+
+  --animate-pulse-soft: pulseSoft 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-laser-sweep: laserSweep 2s ease-in-out infinite;
+  --animate-ring-wave: ringWave 3s cubic-bezier(0, 0.2, 0.8, 1) infinite;
+
+  @keyframes pulseSoft {
+    0%,
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+    50% {
+      transform: scale(1.05);
+      opacity: 0.85;
+    }
+  }
+
+  @keyframes laserSweep {
+    0%,
+    100% {
+      top: 5%;
+    }
+    50% {
+      top: 92%;
+    }
+  }
+
+  @keyframes ringWave {
+    0% {
+      transform: scale(0.85);
+      opacity: 0.9;
+    }
+    70% {
+      transform: scale(1.6);
+      opacity: 0;
+    }
+    100% {
+      transform: scale(1.6);
+      opacity: 0;
+    }
+  }
+}
+
+/* El contenido se escanea desde la raíz del proyecto; se acota a los archivos
+   que realmente usan clases utilitarias para no inflar el bundle. */
+@source "../index.html";

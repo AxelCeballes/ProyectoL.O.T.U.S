@@ -1,0 +1,15 @@
+{
+  "name": "lotus-panol-kiosk",
+  "version": "2.4.0",
+  "private": true,
+  "description": "Terminal de herramientas L.O.T.U.S. — kiosco de NFC y código de barras para pañol industrial",
+  "scripts": {
+    "build": "tailwindcss -i ./src/tailwind.css -o ./assets/lotus.css --minify",
+    "dev": "tailwindcss -i ./src/tailwind.css -o ./assets/lotus.css --watch",
+    "check": "node --check api/chat.js"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.1.13",
+    "tailwindcss": "^4.1.13"
+  }
+}

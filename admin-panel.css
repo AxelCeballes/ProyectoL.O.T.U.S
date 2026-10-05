@@ -1,0 +1,312 @@
+/* admin/admin-panel.css — Panel Admin L.O.T.U.S (oscuro / cyberpunk)
+   Si querés igualar la paleta de tu web, cambiá solo estas variables. */
+
+.lap,
+.lap-launcher {
+  --lap-bg: #07050f;
+  --lap-surface: rgba(20, 15, 36, 0.85);
+  --lap-line: rgba(168, 85, 247, 0.4);
+  --lap-cyan: #00f0ff;
+  --lap-magenta: #ff2e97;
+  --lap-purple: #a855f7;
+  --lap-text: #e8e4f5;
+  --lap-muted: #8a82a8;
+  --lap-ok: #3dff9a;
+  --lap-warn: #ffb347;
+  --lap-mono: ui-monospace, "JetBrains Mono", "Fira Code", Menlo, Consolas, monospace;
+}
+
+.lap *,
+.lap *::before,
+.lap *::after { box-sizing: border-box; }
+
+/* ---------- Botón para abrir ---------- */
+.lap-launcher {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 11px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1a2b42;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+.lap-launcher svg { width: 18px; height: 18px; }
+.lap-launcher:hover { color: #253d5c; border-color: #cbd5e1; background: #f8fafc; }
+.lap-launcher:focus-visible,
+.lap button:focus-visible,
+.lap summary:focus-visible { outline: 2px solid var(--lap-cyan); outline-offset: 2px; }
+
+/* ---------- Capa principal ---------- */
+.lap {
+  position: fixed;
+  inset: 0;
+  z-index: 9500;
+  color: var(--lap-text);
+  font-family: inherit;
+  background: rgba(4, 3, 10, 0.94);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.lap[hidden] { display: none; }
+
+.lap__shell {
+  position: relative;
+  display: grid;
+  grid-template-columns: 230px 1fr;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* ---------- Sidebar ---------- */
+.lap__sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 20px 14px;
+  background: var(--lap-surface);
+  border-right: 1px solid var(--lap-line);
+}
+
+.lap__brand {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 10px 18px;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--lap-cyan);
+  text-shadow: 0 0 10px rgba(0, 240, 255, 0.55);
+}
+.lap__brand span {
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--lap-muted);
+  text-shadow: none;
+}
+
+.lap__nav {
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  color: var(--lap-muted);
+  background: none;
+  border: 1px solid transparent;
+  border-left: 3px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.lap__nav:hover { color: var(--lap-text); background: rgba(168, 85, 247, 0.1); }
+.lap__nav.is-active {
+  color: var(--lap-cyan);
+  background: rgba(0, 240, 255, 0.07);
+  border-left-color: var(--lap-cyan);
+}
+.lap__nav--exit { margin-top: auto; color: var(--lap-magenta); }
+.lap__nav--exit:hover { color: var(--lap-magenta); background: rgba(255, 46, 151, 0.1); }
+
+/* ---------- Contenido ---------- */
+.lap__main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+
+.lap__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 28px;
+  border-bottom: 1px solid var(--lap-line);
+}
+.lap__title { margin: 0; font-size: 20px; font-weight: 600; }
+
+.lap__x {
+  padding: 5px 9px;
+  font: inherit;
+  color: var(--lap-muted);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.lap__x:hover { color: var(--lap-magenta); border-color: var(--lap-magenta); }
+
+.lap__content { flex: 1; min-height: 0; overflow-y: auto; padding: 22px 28px; }
+
+.lap__toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-bottom: 18px; }
+.lap__search,
+.lap-form input,
+.lap-form textarea {
+  font: inherit;
+  font-size: 14px;
+  color: var(--lap-text);
+  background: rgba(24, 18, 40, 0.8);
+  border: 1px solid var(--lap-line);
+  border-radius: 8px;
+  outline: none;
+}
+.lap__search { flex: 1; min-width: 220px; max-width: 380px; padding: 10px 12px; }
+.lap__search:focus,
+.lap-form input:focus,
+.lap-form textarea:focus { border-color: var(--lap-cyan); box-shadow: 0 0 10px rgba(0, 240, 255, 0.3); }
+.lap__meta { font-size: 13px; color: var(--lap-muted); }
+
+.lap__state { margin: 28px 0; color: var(--lap-muted); }
+.lap__state--error { color: #ff8a8a; }
+
+/* ---------- Tabla ---------- */
+.lap__tablewrap { overflow-x: auto; border: 1px solid var(--lap-line); border-radius: 10px; }
+
+.lap-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.lap-table th {
+  padding: 12px 14px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--lap-muted);
+  background: rgba(168, 85, 247, 0.08);
+  border-bottom: 1px solid var(--lap-line);
+  white-space: nowrap;
+}
+.lap-table td { padding: 12px 14px; border-bottom: 1px solid rgba(168, 85, 247, 0.15); vertical-align: middle; }
+.lap-table tbody tr { cursor: pointer; transition: background 0.12s ease; }
+.lap-table tbody tr:hover { background: rgba(0, 240, 255, 0.05); }
+.lap-table tbody tr.is-selected { background: rgba(0, 240, 255, 0.1); }
+.lap-table tbody tr:last-child td { border-bottom: 0; }
+
+.lap-mono { font-family: var(--lap-mono); font-size: 12.5px; }
+.lap-dim { color: var(--lap-muted); font-size: 13px; }
+
+.lap-badge {
+  display: inline-block;
+  padding: 3px 9px;
+  font-size: 12px;
+  white-space: nowrap;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+}
+.lap-badge--ok { color: var(--lap-ok); }
+.lap-badge--use { color: var(--lap-cyan); }
+.lap-badge--warn { color: var(--lap-warn); }
+
+.lap-count {
+  min-width: 38px;
+  padding: 4px 10px;
+  font: inherit;
+  font-family: var(--lap-mono);
+  font-weight: 700;
+  color: var(--lap-magenta);
+  background: rgba(255, 46, 151, 0.1);
+  border: 1px solid var(--lap-magenta);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.lap-count:hover { background: rgba(255, 46, 151, 0.25); box-shadow: 0 0 10px rgba(255, 46, 151, 0.5); }
+.lap-count--zero { color: var(--lap-muted); background: none; border-color: var(--lap-line); }
+
+/* ---------- Cajón de historial ---------- */
+.lap__drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(440px, 100%);
+  padding: 22px 24px;
+  overflow-y: auto;
+  background: rgba(10, 8, 20, 0.97);
+  border-left: 1px solid var(--lap-cyan);
+  box-shadow: -10px 0 40px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 240, 255, 0.15);
+  animation: lap-slide 0.2s ease-out;
+}
+.lap__drawer[hidden] { display: none; }
+@keyframes lap-slide { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+.lap-drawer__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.lap-drawer__name { margin: 0 0 6px; font-size: 17px; line-height: 1.3; }
+.lap-drawer__head p { margin: 0; }
+
+.lap-drawer__stats { display: flex; gap: 28px; margin: 20px 0 8px; padding: 16px 0; border-block: 1px solid var(--lap-line); }
+.lap-drawer__stats div { display: flex; flex-direction: column; gap: 4px; }
+.lap-drawer__stats span { font-size: 12.5px; color: var(--lap-muted); }
+.lap-bignum {
+  font-family: var(--lap-mono);
+  font-size: 40px;
+  line-height: 1;
+  color: var(--lap-magenta);
+  text-shadow: 0 0 14px rgba(255, 46, 151, 0.6);
+}
+
+.lap-drawer__sub { margin: 18px 0 12px; font-size: 14px; color: var(--lap-muted); font-weight: 600; }
+
+.lap-timeline { margin: 0; padding: 0 0 0 16px; list-style: none; border-left: 1px solid var(--lap-line); }
+.lap-timeline li { position: relative; padding: 0 0 18px 16px; }
+.lap-timeline li::before {
+  content: "";
+  position: absolute;
+  left: -21px;
+  top: 5px;
+  width: 9px;
+  height: 9px;
+  background: var(--lap-bg);
+  border: 2px solid var(--lap-cyan);
+  border-radius: 50%;
+}
+.lap-timeline time { font-family: var(--lap-mono); font-size: 12.5px; color: var(--lap-cyan); }
+.lap-timeline p { margin: 4px 0 0; font-size: 14px; line-height: 1.45; overflow-wrap: anywhere; }
+.lap-timeline .lap-dim { font-size: 13px; }
+.lap-notes { color: var(--lap-text); opacity: 0.85; white-space: pre-wrap; }
+.lap-timeline li.is-new { animation: lap-new 1.6s ease-out; }
+@keyframes lap-new { from { background: rgba(0, 240, 255, 0.18); } to { background: transparent; } }
+
+/* ---------- Formulario ---------- */
+.lap-form { margin-top: 8px; border: 1px solid var(--lap-line); border-radius: 10px; }
+.lap-form summary { padding: 12px 14px; cursor: pointer; font-size: 14px; color: var(--lap-cyan); }
+.lap-form form { display: flex; flex-direction: column; gap: 12px; padding: 4px 14px 16px; }
+.lap-form label { display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: var(--lap-muted); }
+.lap-form input,
+.lap-form textarea { width: 100%; padding: 9px 11px; resize: vertical; color-scheme: dark; }
+.lap-form__error { margin: 0; font-size: 13px; color: #ff8a8a; }
+.lap-form__error[hidden] { display: none; }
+
+.lap-btn {
+  align-self: flex-start;
+  padding: 10px 16px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--lap-magenta);
+  background: rgba(255, 46, 151, 0.1);
+  border: 1px solid var(--lap-magenta);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.lap-btn:hover:not(:disabled) { background: rgba(255, 46, 151, 0.25); box-shadow: 0 0 12px rgba(255, 46, 151, 0.5); }
+.lap-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ---------- Móvil ---------- */
+@media (max-width: 720px) {
+  .lap__shell { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+  .lap__sidebar { flex-direction: row; flex-wrap: wrap; align-items: center; padding: 10px 12px; border-right: 0; border-bottom: 1px solid var(--lap-line); }
+  .lap__brand { padding: 0 8px 0 0; font-size: 15px; }
+  .lap__brand span { display: none; }
+  .lap__nav { padding: 8px 10px; border-left-width: 1px; }
+  .lap__nav--exit { margin: 0 0 0 auto; }
+  .lap__head,
+  .lap__content { padding-inline: 16px; }
+}
+
+@media (max-width: 640px) {
+  .lap-launcher span { display: none; }
+  .lap-launcher { padding: 8px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lap__drawer,
+  .lap-timeline li.is-new { animation: none; }
+}
