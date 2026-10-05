@@ -9,8 +9,53 @@
   --color-brand-navy-subtle: #e9eef4;
   --color-brand-bg: #f8f9fa;
 
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Montserrat", ui-sans-serif, system-ui, sans-serif;
+  /* El stack de fuente se repite del tailwind.config original a proposito: con Inter
+     y Montserrat caidas, "sans-serif" y "ui-sans-serif, system-ui" resuelven a
+     fuentes distintas y el texto se rasteriza diferente entre las dos versiones.
+
+     Diferencia conocida que se acepta: v3 guardaba el line-height de cada escala de
+     texto como valor absoluto (text-sm -> 1.25rem) y v4 como proporcion
+     (calc(1.25 / 0.875)). Un elemento que solo cambia el tamano de fuente e hereda
+     el line-height del padre conservaba el del padre en v3; en v4 lo recalcula sobre
+     su propio tamano. Los 16 usos de text-[11px] / text-[10px] pasan de 20px a 15.7px
+     de alto de linea y mueven entre 1 y 4px lo que queda debajo. Para volver al
+     comportamiento de v3 hay que agregar leading-5 explicito a esos elementos. */
+  --font-sans: "Inter", sans-serif;
+  --font-display: "Montserrat", sans-serif;
+
+  /* Interlineado como longitud absoluta, igual que en v3.
+
+     v4 emite el line-height de cada escala como calc(<len>/<len>), por ejemplo
+     calc(1.25 / .875) para text-sm. En CSS dividir dos longitudes da un NUMERO, y
+     un numero en line-height se hereda como multiplicador: el elemento que usa la
+     escala mide lo mismo que en v3, pero un hijo que solo cambia el tamano de
+     fuente (los usos de text-[11px] y text-[10px]) recalcula el interlineado sobre
+     su propio tamano y se aprieta. Medido con el CDN como referencia:
+
+         escala     v3        v4
+         text-xs    16px      14.67px
+         text-sm    20px      15.71px
+         text-base  24px      16.50px
+         text-lg    28px      17.11px
+         text-xl    28px      15.40px
+         text-2xl   32px      14.67px
+         text-3xl   36px      13.20px
+
+     Estos son los valores de v3 medidos en el sitio original, no los por defecto
+     de la documentacion: el tailwind.config los sobreescribia.
+
+     Es seguro porque .text-sm se compila como
+     line-height:var(--tw-leading,var(--text-sm--line-height)), asi que un
+     leading-* explicito sigue mandando. Para volver al interlineado proporcional de
+     v4 (mejor para accesibilidad, porque escala con el tamano de fuente), borrar
+     este bloque. */
+  --text-xs--line-height: 1rem;
+  --text-sm--line-height: 1.25rem;
+  --text-base--line-height: 1.5rem;
+  --text-lg--line-height: 1.75rem;
+  --text-xl--line-height: 1.75rem;
+  --text-2xl--line-height: 2rem;
+  --text-3xl--line-height: 2.25rem;
 
   /* Paridad con Tailwind v3.4, que era lo que renderizaba cdn.tailwindcss.com.
      En v4 `shadow-sm` absorbió el valor de `shadow` de v3 y quedó más marcado;
@@ -18,6 +63,31 @@
   --shadow-2xs: 0 1px 0 0 rgb(0 0 0 / 0.05);
   --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+
+  /* v4 migró la paleta a OKLCH y varias referencias cambiaron de valor al
+     traducirlas. El más visible es emerald-500: #10B981 -> #00BC7D, que además
+     es el verde de marca que documenta el README. Se fijan acá los tokens que el
+     sitio usa, para quitar el CDN sin mover la identidad visual. */
+  --color-slate-300: #cbd5e1;
+  --color-slate-400: #94a3b8;
+  --color-slate-500: #64748b;
+  --color-slate-600: #475569;
+  --color-slate-700: #334155;
+  --color-slate-800: #1e293b;
+  --color-slate-900: #0f172a;
+  --color-emerald-100: #d1fae5;
+  --color-emerald-200: #a7f3d0;
+  --color-emerald-400: #34d399;
+  --color-emerald-500: #10b981;
+  --color-emerald-600: #059669;
+  --color-emerald-700: #047857;
+  --color-amber-600: #d97706;
+  --color-amber-700: #b45309;
+  --color-red-500: #ef4444;
+  --color-red-600: #dc2626;
+  --color-rose-500: #e11d48;
+  --color-rose-700: #be123c;
+  --color-blue-600: #2563eb;
 
   --animate-pulse-soft: pulseSoft 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   --animate-laser-sweep: laserSweep 2s ease-in-out infinite;
@@ -64,6 +134,15 @@
 /* El contenido se escanea desde la raíz del proyecto; se acota a los archivos
    que realmente usan clases utilitarias para no inflar el bundle. */
 @source "../index.html";
+
+/* La detección automática de Tailwind barre todo lo que no esté en .gitignore,
+   y por eso convertía cualquier palabra suelta del código del servidor y de las
+   pruebas en una clase. La primera fue `contents`, que es el nombre que Gemini
+   exige en su campo de petición: aparecía .contents{display:contents} en el
+   bundle sin que nadie la usara en el sitio. Excluir esos dos directorios
+   evita toda esa clase de ruido. */
+@source not "../api";
+@source not "../scripts";
 
 body.dark-mode #introScreen.bg-white {
   background-color: #fff !important;

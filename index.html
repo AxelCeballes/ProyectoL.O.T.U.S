@@ -786,7 +786,7 @@
       };
     }
 
-    function showChatError(bubble, text, retry) {
+    function showChatError(bubble, text, retry, userBubble) {
       bubble.className = 'max-w-[85%] rounded-2xl rounded-tl-sm border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700';
       bubble.textContent = text;
       if (!retry) return;
@@ -796,8 +796,11 @@
       button.className = 'mt-2 rounded-lg bg-brand-navy px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-navy-light active:scale-95 cursor-pointer';
       button.textContent = 'Reintentar';
       button.addEventListener('click', () => {
+        // La burbuja del usuario ya se habia dibujado antes del fetch, asi que
+        // hay que retirarla: sendChatMessage vuelve a crearla al reintentar y
+        // sin esto el mensaje quedaria duplicado en el transcript.
         bubble.remove();
-        button.remove();
+        userBubble.remove();
         chatInput.value = retry;
         chatForm.requestSubmit();
       });
@@ -810,7 +813,7 @@
       const message = chatInput.value.trim();
       if (!message || sendChatBtn.disabled) return;
 
-      appendChatMessage(message, 'user');
+      const userMessage = appendChatMessage(message, 'user');
       chatInput.value = '';
       sendChatBtn.disabled = true;
       const loadingMessage = appendChatMessage('Estoy pensando...', 'assistant');
@@ -848,7 +851,8 @@
           error instanceof TypeError
             ? 'No se pudo conectar con el asistente. Revisá la conexión e intentá de nuevo.'
             : error.message,
-          message
+          message,
+          userMessage
         );
       } finally {
         sendChatBtn.disabled = false;
