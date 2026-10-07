@@ -6,7 +6,7 @@
 // contra las dos, para que un cambio en un proveedor no pueda romper el otro en
 // silencio. Ejecutar: node scripts/test-chat.mjs
 
-import handler from '../api/chat.js';
+import handler, { sanitizePurchases } from '../api/chat.js';
 
 const { SYSTEM_PROMPT } = handler;
 
@@ -328,6 +328,17 @@ async function suiteCompartida() {
   check('una cantidad 0 sube a 1', compraRes.body.comprar?.[1]?.quantity === 1, String(compraRes.body.comprar?.[1]?.quantity));
   check('no duplica pedidos del mismo artículo', !compraRes.body.comprar?.some((p) => p.quantity === 9));
   check('descarta el pedido sin nombre', !compraRes.body.comprar?.some((p) => p.name === ''));
+
+  // Contra Gemini real apareció este caso: con "hola" el modelo devolvió la
+  // plantilla del esquema ("name": "string") como pedido. Un nombre así no es
+  // una reposición, es ruido: no debe llegar a la lista de compras.
+  const ruido = sanitizePurchases([
+    { name: 'string', quantity: 1 },
+    { name: 'Disco de corte 4 1/2"', quantity: 1 },
+    { name: '...', quantity: 2 },
+  ]);
+  check('descarta la plantilla del esquema', ruido.length === 1 && ruido[0].name === 'Disco de corte 4 1/2"', JSON.stringify(ruido));
+  check('el prompt prohíbe completar el ejemplo', /nunca completás un objeto de ejemplo/i.test(SYSTEM_PROMPT));
 
   // Una consulta no genera pedidos: si no, cada "¿qué falta?" crea uno.
   stubFetch(async () =>

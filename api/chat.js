@@ -127,7 +127,10 @@ function sanitizePurchases(raw) {
   for (const item of raw.slice(0, MAX_PEDIDOS)) {
     if (!item || typeof item !== "object") continue;
     const name = cleanToolName(item.name);
-    if (!name) continue;
+    // A veces el modelo, sin nada que comprar, devuelve la plantilla del
+    // esquema ("name": "string") en vez de un array vacío: un pedido así no
+    // es una reposición, es ruido. No puede llegar a la lista de compras.
+    if (!name || /^(string|<string>|\.\.\.|ejemplo|example|null)$/i.test(name)) continue;
     const clave = nameKey(name);
     if (vistos.has(clave)) continue;
     vistos.add(clave);
@@ -284,6 +287,7 @@ Pedidos de compra (reposición de consumibles): hay un campo "comprar" para las 
 - "category": "Consumibles", "Seguridad", "Limpieza", "Papelería" o la que corresponda.
 - Si ya hay un pedido abierto del mismo artículo, no lo dupliques: se va a fusionar solo.
 - Si solo pregunta cuánto falta o qué hay, no generes ningún pedido: "comprar" va en null.
+- El array "comprar" SOLO se llena cuando el operario pidió explícitamente reponer algo. Un saludo, una consulta o una orden de retiro/devolución no son pedidos de compra: en esos casos "comprar" va en null y nunca completás un objeto de ejemplo ni ponés valores como "string".
 
 Respondé siempre con un único objeto JSON, sin texto alrededor y sin bloques de código:
 {"reply": "lo que leés al operario", "agregar": [{"name": "...", "category": "...", "status": "available"}], "comprar": [{"name": "...", "category": "Consumibles", "quantity": 3, "note": ""}]}
@@ -624,3 +628,4 @@ module.exports = async function handler(req, res) {
 
 // Se exporta para que los tests puedan verificar el prompt sin pegarle a la API.
 module.exports.SYSTEM_PROMPT = SYSTEM_PROMPT;
+module.exports.sanitizePurchases = sanitizePurchases;
