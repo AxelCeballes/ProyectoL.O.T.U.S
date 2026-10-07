@@ -189,7 +189,12 @@ function personKey(value) {
 }
 
 async function handleShifts(req, res, url) {
-  if (!adminAuthorized(req)) return json(res, 401, { error: 'Token de administrador inválido o falta ADMIN_TOKEN en el servidor.' });
+  // El fichaje es el kiosco: la entrada y la salida se marcan con el NFC o el
+  // botón del panel, sin pedir token. Borrar un registro (limpieza) sí exige
+  // el token de admin, porque borrar la trazabilidad no es una marca.
+  const anonimo = req.method === 'GET' || req.method === 'POST' ||
+    (req.method === 'PATCH' && /^\/api\/shifts\/[^/]+$/.test(url.pathname));
+  if (!anonimo && !adminAuthorized(req)) return json(res, 401, { error: 'Token de administrador inválido o falta ADMIN_TOKEN en el servidor.' });
   try {
     if (url.pathname === '/api/shifts' && req.method === 'GET') {
       return json(res, 200, await readShifts());
@@ -241,7 +246,9 @@ async function handleShifts(req, res, url) {
 }
 
 async function handlePurchases(req, res, url) {
-  if (!adminAuthorized(req)) return json(res, 401, { error: 'Token de administrador inválido o falta ADMIN_TOKEN en el servidor.' });
+  // Leer la lista de pedidos es público (lo hace el chat y el panel); anotar o
+  // cambiar pedidos es escritura y exige el token de admin.
+  if (req.method !== 'GET' && !adminAuthorized(req)) return json(res, 401, { error: 'Token de administrador inválido o falta ADMIN_TOKEN en el servidor.' });
   const PURCHASE_STATUSES = ['pending', 'ordered', 'received'];
   try {
     if (url.pathname === '/api/purchases' && req.method === 'GET') {
@@ -309,7 +316,10 @@ async function handlePurchases(req, res, url) {
 }
 
 async function handleTools(req, res, url) {
-  if (!adminAuthorized(req)) return json(res, 401, { error: 'Token de administrador inválido o falta ADMIN_TOKEN en el servidor.' });
+  // Consultar inventario y bajar el Excel es público: el kiosco y el chat los
+  // leen sin pedir token. Modificar (altas, bajas, movimientos) es escritura
+  // y exige el token de admin.
+  if (req.method !== 'GET' && !adminAuthorized(req)) return json(res, 401, { error: 'Token de administrador inválido o falta ADMIN_TOKEN en el servidor.' });
   try {
     if (url.pathname === '/api/tools/excel' && req.method === 'GET') {
       const bytes = existsSync(EXCEL_FILE) ? await fs.readFile(EXCEL_FILE) : createFalmetWorkbook(await readTools());

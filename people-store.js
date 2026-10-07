@@ -82,10 +82,11 @@ function writeLocal(shifts) {
 
 // ---------- API ----------
 async function api(path, options = {}) {
+  const token = adminToken();
   const res = await fetch(`${config.apiBase}${path}`, {
     ...options,
     signal: options.signal ?? AbortSignal.timeout(10000),
-    headers: { "Content-Type": "application/json", "x-admin-token": adminToken(), ...options.headers },
+    headers: { "Content-Type": "application/json", ...(token ? { "x-admin-token": token } : {}), ...options.headers },
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
@@ -108,6 +109,13 @@ async function apiOrLocal(remote, local) {
     // sigue conectado. Solo un fallo de red o un endpoint inexistente degrada.
     if (error?.status === 400 || error?.status === 409 || error?.status === 422) {
       throw error;
+    }
+    // 401 sin token: esta operación cae al navegador pero el modo NO queda
+    // fijo en "local". Si después se entra al panel y se guarda el token, las
+    // próximas escrituras vuelven a ir al servidor.
+    if (error?.status === 401) {
+      console.warn(`Entradas y salidas: ${config.apiBase} pidió token y no hay. Hago esta operación en el navegador.`);
+      return local();
     }
     config.mode = "local";
     console.warn(`Entradas y salidas: ${config.apiBase} no respondió (${error.message}). Sigo con el del navegador.`);

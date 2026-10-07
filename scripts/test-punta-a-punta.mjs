@@ -13,9 +13,19 @@ const check = (nombre, ok, detalle = '') => {
   if (!ok) fallas++;
 };
 
-// 1. Inventario: sin token tiene que dar 401, no regalar datos.
+// 1. Inventario: leer es público (lo hace el kiosco y el chat sin prompt).
+// Escribir es de admin. Antes el GET también pedía token y el chat pedía el
+// token para arrancar.
 const sinToken = await fetch(`${BASE}/api/tools`);
-check('sin token el inventario responde 401', sinToken.status === 401, String(sinToken.status));
+check('sin token el inventario responde 200', sinToken.status === 200, String(sinToken.status));
+
+// Leer es público, pero dar de alta una herramienta es una escritura de admin.
+const escribirHerramienta = await fetch(`${BASE}/api/tools`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ id: 'LOTUS-SIN-TOKEN', name: 'Prueba sin autorización', status: 'available' }),
+});
+check('alta de herramienta sin token responde 401', escribirHerramienta.status === 401, String(escribirHerramienta.status));
 
 // 2. Con token, el inventario responde.
 const inv = await fetch(`${BASE}/api/tools`, { headers: h });
@@ -86,11 +96,19 @@ check('el bot pidio guantes', pedidos.some((p) => /guante/i.test(p.name)));
 check('cada pedido trae nombre y cantidad', pedidos.every((p) => p.name && p.quantity >= 1));
 check('la cantidad que se pidio se respeta', pedidos.some((p) => /guante/i.test(p.name) && p.quantity === 5), JSON.stringify(pedidos.find((p) => /guante/i.test(p.name))?.quantity));
 
-// 7. La API de pedidos: sin token 401, con token guarda y fusiona.
+// 7. La API de pedidos: leer es público; anotar/cambiar escribe y exige token.
+// Escribir sin token da 401 (no regala el dato), con token guarda y fusiona.
 console.log('\ncompras por API:');
 
 const comprasSinToken = await fetch(`${BASE}/api/purchases`);
-check('sin token los pedidos responden 401', comprasSinToken.status === 401, String(comprasSinToken.status));
+check('sin token los pedidos responden 200', comprasSinToken.status === 200, String(comprasSinToken.status));
+
+const escribirSinToken = await fetch(`${BASE}/api/purchases`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ name: 'Cosa sin autorización', quantity: 1 }),
+});
+check('anotar un pedido sin token responde 401', escribirSinToken.status === 401, String(escribirSinToken.status));
 
 const altaCompra = await fetch(`${BASE}/api/purchases`, {
   method: 'POST',
@@ -130,18 +148,20 @@ check('cambiar el estado a recibido', recibido.status < 300, String(recibido.sta
 const borrado = await fetch(`${BASE}/api/purchases/${encodeURIComponent(pedidoId)}`, { method: 'DELETE', headers: h });
 check('borrar el pedido de prueba', borrado.status < 300, String(borrado.status));
 
-// 9. Personal por API: fichaje de entrada y salida.
+// 9. Personal por API: el fichaje es del kiosco (NFC), así que la entrada y la
+// salida no piden token — el escaneo no puede abrir un prompt. Borrar un
+// registro (limpieza del panel) sí exige token.
 console.log('\npersonal por API:');
 
 const personalSinToken = await fetch(`${BASE}/api/shifts`);
-check('sin token las entradas responden 401', personalSinToken.status === 401, String(personalSinToken.status));
+check('sin token las entradas responden 200', personalSinToken.status === 200, String(personalSinToken.status));
 
 const entrada = await (await fetch(`${BASE}/api/shifts`, {
   method: 'POST',
-  headers: h,
+  headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ name: 'Ana Gómez' }),
 })).json();
-check('la entrada se registró', !!entrada.id && entrada.exitAt === null, entrada.id);
+check('la entrada se registró sin token (kiosco)', !!entrada.id && entrada.exitAt === null, entrada.id);
 
 const entradaRepetida = await fetch(`${BASE}/api/shifts`, {
   method: 'POST',

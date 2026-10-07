@@ -16,6 +16,7 @@ import {
   lastRepairDate,
   allRepairs,
   downloadExcel,
+  requestAdminToken,
 } from "./repairs-store.js";
 import {
   listShifts,
@@ -529,9 +530,9 @@ export function mountAdminPanel({ store } = {}) {
     state.error = "";
     render();
 
-    // El inventario va primero porque es el store que pide el token de admin y
-    // lo deja guardado en la sesión; compras y personal lo reutilizan y no
-    // tendrían con qué autenticarse si corriéramos al mismo tiempo.
+    // El token ya quedó guardado al entrar (requestAdminToken en open), así que
+    // las lecturas traen datos del servidor. El inventario va primero y compras
+    // y personal se cargan aparte: si uno falla, no arrastra al resto.
     try {
       state.tools = await listTools();
     } catch (err) {
@@ -660,6 +661,9 @@ export function mountAdminPanel({ store } = {}) {
     }
     isAuthenticated = true;
     authDialog.close();
+    // El token de servidor se pide acá, al entrar al panel, y solo si todavía
+    // no quedó guardado en la sesión. El kiosco y el chat no lo piden nunca.
+    requestAdminToken();
     open();
   });
 

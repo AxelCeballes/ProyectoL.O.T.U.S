@@ -652,6 +652,17 @@
       <span class="flex items-center gap-1">
         <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Servidor Conectado
       </span>
+      <span>·</span>
+      <a href="https://www.instagram.com/l.o.t.u.s_solutions/" target="_blank" rel="noopener noreferrer"
+         class="inline-flex items-center gap-1.5 text-brand-navy hover:text-emerald-600 transition-colors no-underline"
+         aria-label="Seguinos en Instagram">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+          <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
+          <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
+        </svg>
+        <span>@l.o.t.u.s_solutions</span>
+      </a>
     </div>
   </footer>
 
@@ -887,6 +898,29 @@
           if (rechazadas.length) {
             appendChatMessage(
               `No pude agregar ${rechazadas.length > 1 ? 'estas herramientas' : 'esta herramienta'}: ${rechazadas.join('; ')}`,
+              'assistant'
+            );
+          }
+        }
+
+        // Pedidos de compra: "nos faltan discos" genera un pedido, no un alta.
+        // Un disco que se acaba es un consumible a reponer, no una herramienta
+        // nueva en el taller.
+        if (Array.isArray(data.comprar) && data.comprar.length) {
+          const puenteCompras = window.__LOTUS_COMPRAS__;
+          const { pedidos, rechazados } = puenteCompras
+            ? await puenteCompras.aplicar(data.comprar)
+            : { pedidos: [], rechazados: ['no se pudo acceder a la lista de compras'] };
+
+          if (pedidos.length) {
+            const detalle = pedidos
+              .map((p) => `${p.name} x${p.quantity}`)
+              .join(', ');
+            appendChatMessage(`Pedido de compra: ${detalle}.`, 'assistant');
+          }
+          if (rechazados.length) {
+            appendChatMessage(
+              `No pude anotar ${rechazados.length > 1 ? 'estos pedidos' : 'este pedido'}: ${rechazados.join('; ')}`,
               'assistant'
             );
           }
@@ -1273,7 +1307,13 @@
     function simulateNfcScan() {
       playNfcSound();
       nfcInput.value = '';
-      
+
+      // Fichaje: el escaneo de la credencial marca la entrada del operario en
+      // el panel Personal. No espera al servidor (fire-and-forget): la
+      // pantalla avanza igual y el registro queda por detrás.
+      const fichaje = window.__LOTUS_FICHAJE__;
+      if (fichaje) fichaje.entrar('Juan Pérez');
+
       const nfcCardBadge = document.getElementById('nfcCardBadge');
       const nfcSonarWave = document.getElementById('nfcSonarWave');
       
@@ -1307,6 +1347,10 @@
 
     // Cerrar sesión
     function logoutToStandby() {
+      // Cierra la jornada del operario que escaneó: aparece la salida en el
+      // panel Personal. Fire-and-forget, no bloquea la vuelta al kiosco.
+      const fichaje = window.__LOTUS_FICHAJE__;
+      if (fichaje) fichaje.salir();
       goToScreen(1);
     }
 
@@ -1417,7 +1461,8 @@
   <script type="module">
     import { mountAdminPanel } from './admin-panel.js';
     import { listTools, addTool } from './repairs-store.js';
-import { listPurchases, addPurchase } from './purchases-store.js';
+    import { listPurchases, addPurchase } from './purchases-store.js';
+    import { startShift, endShift } from './people-store.js';
 
     mountAdminPanel();
 
@@ -1434,7 +1479,7 @@ import { listPurchases, addPurchase } from './purchases-store.js';
       const agregadas = [];
       const rechazadas = [];
 
-for (const item of Array.isArray(lista) ? lista.slice(0, 20) : []) {
+      for (const item of Array.isArray(lista) ? lista.slice(0, 20) : []) {
       const name = String(item?.name ?? '').trim();
       if (!name) continue;
       try {
@@ -1467,27 +1512,7 @@ for (const item of Array.isArray(lista) ? lista.slice(0, 20) : []) {
             quantity: Number(item?.quantity) || 1,
             note: String(item?.note ?? '').trim(),
           }));
-// Pedidos de compra: "nos faltan discos" genera un pedido, no un alta.
-        if (Array.isArray(data.comprar) && data.comprar.length) {
-          const puenteCompras = window.__LOTUS_COMPRAS__;
-          const { pedidos, rechazados } = puenteCompras
-            ? await puenteCompras.aplicar(data.comprar)
-            : { pedidos: [], rechazados: ['no se pudo acceder a la lista de compras'] };
-
-          if (pedidos.length) {
-            const detalle = pedidos
-              .map((p) => `${p.name} x${p.quantity}`)
-              .join(', ');
-            appendChatMessage(`Pedido de compra: ${detalle}.`, 'assistant');
-          }
-          if (rechazados.length) {
-            appendChatMessage(
-              `No pude anotar ${rechazados.length > 1 ? 'estos pedidos' : 'este pedido'}: ${rechazados.join('; ')}`,
-              'assistant'
-            );
-          }
-        }
-      } catch (error) {
+        } catch (error) {
           rechazados.push(error.message);
         }
       }
@@ -1522,6 +1547,37 @@ for (const item of Array.isArray(lista) ? lista.slice(0, 20) : []) {
         }
       },
       aplicar: aplicarPedidos,
+    };
+
+    // El kiosco también vive en el script clásico: el escaneo del NFC marca la
+    // entrada del operario en el panel Personal, y "Cerrar sesión" marca la
+    // salida. Sin token ni prompt: el fichaje es una marca, no una edición.
+    let fichaShiftId = null;
+    window.__LOTUS_FICHAJE__ = {
+      async entrar(nombre) {
+        try {
+          const shift = await startShift({ name: nombre });
+          fichaShiftId = shift?.id ?? null;
+          return shift;
+        } catch (error) {
+          // "Ya está adentro" es una marca repetida, no un fallo: el kiosco
+          // sigue abriendo la sesión del operario igual.
+          if (/ya está adentro/i.test(error.message)) return null;
+          console.warn('No se pudo registrar la entrada en el Personal:', error.message);
+          return null;
+        }
+      },
+      async salir() {
+        const id = fichaShiftId;
+        fichaShiftId = null;
+        if (!id) return null;
+        try {
+          return await endShift(id);
+        } catch (error) {
+          console.warn('No se pudo registrar la salida:', error.message);
+          return null;
+        }
+      },
     };
   </script>
 </body>

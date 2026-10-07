@@ -120,28 +120,42 @@ function writeLocal(tools) {
 
 // ---------- Modo API ----------
 /**
- * Token de administrador para las APIs persistentes.
+ * Token de administrador guardado en la sesión.
  *
- * Lo pide una sola vez y queda en la sesión; los otros stores (compras y
- * personal) lo importan desde acá para no repetir el prompt. Si no hay
- * navegador (tests en Node) devuelve vacío y el servidor responde 401, que es
- * el comportamiento correcto: sin token no hay datos.
+ * Ya NO pide nada por sí solo: leer inventario, compras y personal es público,
+ * así que el chat y el kiosco funcionan sin token y sin ventanas de por medio.
+ * El token se pide una sola vez al entrar al Panel Admin con requestAdminToken()
+ * y queda en la sesión; los otros stores (compras y personal) lo importan desde
+ * acá para no repetir el prompt.
  */
 export function adminToken() {
-  let token = "";
   try {
-    token = sessionStorage.getItem("lotus.adminToken") ?? "";
+    return sessionStorage.getItem("lotus.adminToken") ?? "";
   } catch {
     return "";
   }
-  if (token) return token;
+}
+
+/**
+ * Pide el token de admin solo si todavía no quedó guardado en la sesión.
+ * Es el único lugar que abre el prompt: la entrada al Panel Admin.
+ */
+export function requestAdminToken() {
+  if (adminToken()) return adminToken();
   if (typeof window === "undefined" || typeof window.prompt !== "function") return "";
-  token = window.prompt("Token de administrador:") ?? "";
-  if (token) sessionStorage.setItem("lotus.adminToken", token);
+  const token = window.prompt("Token de administrador del servidor:") ?? "";
+  if (token) {
+    try {
+      sessionStorage.setItem("lotus.adminToken", token);
+    } catch {
+      /* sin sesión: se queda en memoria y las escrituras caen al navegador */
+    }
+  }
   return token;
 }
 
 async function api(path, options = {}) {
+  const token = adminToken();
   const res = await fetch(`${config.apiBase}${path}`, {
     ...options,
     // Una API colgada (proxy sin respuesta) es indistinguible de una lenta si
@@ -150,13 +164,15 @@ async function api(path, options = {}) {
     signal: options.signal ?? AbortSignal.timeout(10000),
     headers: {
       "Content-Type": "application/json",
-      "x-admin-token": adminToken(),
+      ...(token ? { "x-admin-token": token } : {}),
       ...options.headers,
     },
   });
   if (res.status === 401) {
     sessionStorage.removeItem("lotus.adminToken");
-    throw new Error("Token de administrador inválido.");
+    const error = new Error("Token de administrador inválido.");
+    error.status = 401;
+    throw error;
   }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
@@ -211,6 +227,13 @@ async function apiOrLocal(remote, local) {
   } catch (error) {
     if (error?.status === 400 || error?.status === 409 || error?.status === 422) {
       throw error;
+    }
+    // 401 sin token: esta operación cae al navegador pero el modo NO queda
+    // fijo en "local". Si después se entra al panel y se guarda el token, las
+    // próximas escrituras vuelven a ir al servidor.
+    if (error?.status === 401) {
+      console.warn(`Inventario: ${config.apiBase} pidió token y no hay. Hago esta operación en el navegador.`);
+      return local();
     }
     config.mode = "local";
     console.warn(
