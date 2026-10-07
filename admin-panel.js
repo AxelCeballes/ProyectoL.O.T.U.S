@@ -275,12 +275,45 @@ export function mountAdminPanel({ store } = {}) {
 
   // ---------- Compras ----------
   // Es lo que el bot genera cuando el operario dice que falta algo consumible.
+  // Avisa con un resaltado qué falta comprar: son los pedidos que el chat anotó
+  // ("faltan tornillos", "faltan discos de corte") y todavía no cerraron.
+  function faltanteBanner() {
+    const pendientes = state.purchases.filter((p) => p.status === "pending");
+    const enCamino = state.purchases.filter((p) => p.status === "ordered");
+    const total = pendientes.length + enCamino.length;
+
+    if (total === 0) {
+      return `<div class="mb-4 flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+        <svg class="h-5 w-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/></svg>
+        <span><strong>Todo al día.</strong> No falta nada pendiente de compra.</span>
+      </div>`;
+    }
+
+    const listar = (items) =>
+      items
+        .slice(0, 8)
+        .map((p) => `${esc(p.name)} (x${Number(p.quantity)})`)
+        .join(", ") + (items.length > 8 ? ` y ${items.length - 8} más` : "");
+
+    const partes = [];
+    if (pendientes.length) partes.push(`<strong>Faltan:</strong> ${listar(pendientes)}`);
+    if (enCamino.length) partes.push(`<strong>Ya en camino:</strong> ${listar(enCamino)}`);
+
+    return `<div class="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+      <div class="flex items-center gap-3">
+        <svg class="h-5 w-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4"/><path d="M12 17h.01"/><circle cx="12" cy="12" r="10"/></svg>
+        <span><strong>${total > 1 ? `${total} artículos` : "1 artículo"} sin cerrar.</strong> ${partes.join(" ")}</span>
+      </div>
+    </div>`;
+  }
+
   function purchasesView() {
     const abiertas = openPurchases(state.purchases);
     const cerradas = state.purchases.filter((p) => p.status === "received");
+    const banner = faltanteBanner();
 
     if (!state.purchases.length) {
-      return `<p class="lap__state">Todavía no hay pedidos de compra. Pedile al bot
+      return `${banner}<p class="lap__state">Todavía no hay pedidos de compra. Pedile al bot
         ("nos faltan discos de corte") y aparece acá.</p>`;
     }
 
@@ -321,6 +354,7 @@ export function mountAdminPanel({ store } = {}) {
       </div>`;
 
     return `
+      ${banner}
       <h3 class="lap__sub">Para comprar (${abiertas.length})</h3>
       ${tabla(abiertas, "No hay nada pendiente de compra.")}
       ${cerradas.length ? `<h3 class="lap__sub">Recibidos (${cerradas.length})</h3>${tabla(cerradas, "")}` : ""}`;
@@ -495,6 +529,11 @@ export function mountAdminPanel({ store } = {}) {
       b.classList.toggle("is-active", active);
       b.toggleAttribute("aria-current", active);
     });
+
+    // El menú avisa cuánto falta cerrar en Compras sin entrar a la pestaña.
+    const navCompras = root.querySelector('.lap__nav[data-view="purchases"]');
+    const porCerrar = openPurchases(state.purchases).length;
+    navCompras.textContent = porCerrar ? `Compras (${porCerrar})` : "Compras";
 
     // El error no se queda como única pantalla: se muestra arriba y la vista
     // igual se dibuja debajo, así compras y personal siguen siendo usables
