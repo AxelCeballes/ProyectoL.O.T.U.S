@@ -7,17 +7,44 @@ import {
   listTools,
   addTool,
   deleteTool,
+  markToolOut,
+  markToolIn,
+  toolMovement,
   registerRepair,
   repairCount,
   sortedRepairs,
   lastRepairDate,
   allRepairs,
+  downloadExcel,
 } from "./repairs-store.js";
+import {
+  listShifts,
+  startShift,
+  endShift,
+  deleteShift,
+  insideNow,
+  knownPeople,
+  shiftDuration,
+} from "./people-store.js";
+import {
+  listPurchases,
+  setPurchaseStatus,
+  deletePurchase,
+  openPurchases,
+} from "./purchases-store.js";
 
 const STATUS = {
   available: { label: "Disponible", cls: "ok" },
   in_use: { label: "En uso", cls: "use" },
   maintenance: { label: "En mantenimiento", cls: "warn" },
+};
+
+// Los pedidos de compra tienen sus propios estados: un consumible que hay que
+// comprar no está ni disponible ni en mantenimiento.
+const PURCHASE_STATUS = {
+  pending: { label: "Pedido", cls: "warn" },
+  ordered: { label: "Comprado", cls: "use" },
+  received: { label: "Recibido", cls: "ok" },
 };
 
 const ADMIN_PASSWORD = "falmet";
@@ -37,8 +64,38 @@ function todayISO() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+// ---------- Hora y duración ----------
+const sameDay = (a, b) => new Date(a).toDateString() === new Date(b).toDateString();
+
+function fmtTime(ms) {
+  if (!ms) return "—";
+  return new Date(ms).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
+}
+
+/** "04/10 14:20", con el día solo si no es hoy: hoy ya lo dice el reloj. */
+function fmtWhen(ms) {
+  if (!ms) return "—";
+  const fecha = new Date(ms);
+  const hora = fmtTime(ms);
+  return sameDay(ms, Date.now()) ? hora : `${fecha.getDate()}/${fecha.getMonth() + 1} ${hora}`;
+}
+
+/** "3 h 12 m" o "45 m". Para los registros abiertos corre con `now`. */
+function fmtDuration(ms) {
+  if (ms < 0) return "—";
+  const min = Math.floor(ms / 60000);
+  if (min < 1) return "menos de 1 m";
+  const h = Math.floor(min / 60);
+  return h ? `${h} h ${min % 60} m` : `${min} m`;
+}
+
 const badge = (status) => {
   const s = STATUS[status] ?? { label: status, cls: "use" };
+  return `<span class="lap-badge lap-badge--${s.cls}">${esc(s.label)}</span>`;
+};
+
+const purchaseBadge = (status) => {
+  const s = PURCHASE_STATUS[status] ?? { label: status, cls: "use" };
   return `<span class="lap-badge lap-badge--${s.cls}">${esc(s.label)}</span>`;
 };
 
@@ -48,6 +105,8 @@ export function mountAdminPanel({ store } = {}) {
   const state = {
     view: "tools",
     tools: [],
+    purchases: [],
+    shifts: [],
     query: "",
     selectedId: null,
     loading: false,
@@ -94,6 +153,8 @@ export function mountAdminPanel({ store } = {}) {
         <div class="lap__brand">L.O.T.U.S<span>Panel Admin</span></div>
         <button type="button" class="lap__nav" data-action="nav" data-view="tools">Herramientas</button>
         <button type="button" class="lap__nav" data-action="nav" data-view="history">Reparaciones</button>
+        <button type="button" class="lap__nav" data-action="nav" data-view="purchases">Compras</button>
+        <button type="button" class="lap__nav" data-action="nav" data-view="shifts">Personal</button>
         <button type="button" class="lap__nav lap__nav--exit" data-action="close">Volver al terminal</button>
       </nav>
       <main class="lap__main">
@@ -133,24 +194,39 @@ export function mountAdminPanel({ store } = {}) {
     return `
       <table class="lap-table">
         <thead>
-          <tr><th>ID</th><th>Herramienta</th><th>Categoría</th><th>Estado</th><th>Reparaciones</th><th>Última</th><th>Acciones</th></tr>
+          <tr>
+            <th>ID</th><th>Herramienta</th><th>Categoría</th><th>Estado</th>
+            <th>Horario</th><th>Reparaciones</th><th>Últ. reparación</th><th>Acciones</th>
+          </tr>
         </thead>
         <tbody>
           ${rows
             .map((t) => {
               const n = repairCount(t);
+              const { outAt, inAt, fuera } = toolMovement(t);
               return `
               <tr data-action="open-tool" data-id="${esc(t.id)}" class="${t.id === state.selectedId ? "is-selected" : ""}">
                 <td class="lap-mono">${esc(t.id)}</td>
                 <td>${esc(t.name)}</td>
                 <td>${esc(t.category)}</td>
                 <td>${badge(t.status)}</td>
+                <td class="lap-mono lap-dim lap-hours">
+                  <span>sal ${esc(fmtWhen(outAt))}</span>
+                  <span>ent ${esc(fmtWhen(inAt))}</span>
+                </td>
                 <td>
                   <button type="button" class="lap-count${n === 0 ? " lap-count--zero" : ""}" data-action="open-tool" data-id="${esc(t.id)}"
                     aria-label="Ver historial de ${esc(t.name)}: ${n} reparaciones">${n}</button>
                 </td>
                 <td>${fmtDate(lastRepairDate(t))}</td>
-                <td>
+                <td class="lap__rowactions">
+                  ${
+                    fuera
+                      ? `<button type="button" class="lap-btn lap-btn--ghost" data-action="tool-in" data-id="${esc(t.id)}"
+                          aria-label="Marcar la entrada de ${esc(t.name)}">Entrar</button>`
+                      : `<button type="button" class="lap-btn lap-btn--ghost" data-action="tool-out" data-id="${esc(t.id)}"
+                          aria-label="Marcar la salida de ${esc(t.name)}">Salir</button>`
+                  }
                   <button type="button" class="lap-delete-btn" data-action="delete-tool" data-id="${esc(t.id)}"
                     aria-label="Eliminar ${esc(t.name)}">Eliminar</button>
                 </td>
@@ -168,6 +244,7 @@ export function mountAdminPanel({ store } = {}) {
         <input type="search" id="lap-search" class="lap__search" placeholder="Buscar por nombre, ID o categoría"
           value="${esc(state.query)}" aria-label="Buscar herramienta" />
         <span class="lap__meta">${state.tools.length} herramientas · ${total} reparaciones</span>
+        <button type="button" class="lap-btn" data-action="download-excel">Descargar Excel</button>
       </div>
       <details class="lap-add">
         <summary>Agregar herramienta</summary>
@@ -193,6 +270,121 @@ export function mountAdminPanel({ store } = {}) {
         </form>
       </details>
       <div class="lap__tablewrap" id="lap-table">${tableHTML()}</div>`;
+  }
+
+  // ---------- Compras ----------
+  // Es lo que el bot genera cuando el operario dice que falta algo consumible.
+  function purchasesView() {
+    const abiertas = openPurchases(state.purchases);
+    const cerradas = state.purchases.filter((p) => p.status === "received");
+
+    if (!state.purchases.length) {
+      return `<p class="lap__state">Todavía no hay pedidos de compra. Pedile al bot
+        ("nos faltan discos de corte") y aparece acá.</p>`;
+    }
+
+    const tabla = (filas, vacio) => `
+      <div class="lap__tablewrap">
+        <table class="lap-table">
+          <thead><tr><th>Artículo</th><th>Cantidad</th><th>Estado</th><th></th></tr></thead>
+          <tbody>
+            ${
+              filas.length
+                ? filas
+                    .map(
+                      (p) => `
+              <tr>
+                <td>${esc(p.name)}${p.note ? `<br><span class="lap-dim">${esc(p.note)}</span>` : ""}</td>
+                <td>${Number(p.quantity)}</td>
+                <td>${purchaseBadge(p.status)}</td>
+                <td class="lap__rowactions">
+                  ${
+                    p.status === "pending"
+                      ? `<button type="button" class="lap-btn lap-btn--ghost" data-action="purchase-status" data-id="${esc(p.id)}" data-status="ordered">Marcar comprado</button>`
+                      : ""
+                  }
+                  ${
+                    p.status !== "received"
+                      ? `<button type="button" class="lap-btn lap-btn--ghost" data-action="purchase-status" data-id="${esc(p.id)}" data-status="received">Marcar recibido</button>`
+                      : ""
+                  }
+                  <button type="button" class="lap-btn lap-btn--ghost" data-action="purchase-delete" data-id="${esc(p.id)}">Borrar</button>
+                </td>
+              </tr>`
+                    )
+                    .join("")
+                : `<tr><td colspan="4" class="lap-dim">${vacio}</td></tr>`
+            }
+          </tbody>
+        </table>
+      </div>`;
+
+    return `
+      <h3 class="lap__sub">Para comprar (${abiertas.length})</h3>
+      ${tabla(abiertas, "No hay nada pendiente de compra.")}
+      ${cerradas.length ? `<h3 class="lap__sub">Recibidos (${cerradas.length})</h3>${tabla(cerradas, "")}` : ""}`;
+  }
+
+  // ---------- Personal ----------
+  // Fichaje simple: cuándo entró cada persona, cuándo salió y cuánto duró.
+  function shiftsView() {
+    const ahora = Date.now();
+    const adentro = insideNow(state.shifts, ahora);
+    // Primero los que están adentro, y después lo más reciente arriba.
+    const orden = [...state.shifts].sort(
+      (a, b) => (a.exitAt === null ? 0 : 1) - (b.exitAt === null ? 0 : 1) || b.entryAt - a.entryAt
+    );
+    const personas = knownPeople(state.shifts);
+
+    const filas = orden.length
+      ? orden
+          .map((s) => {
+            const abierto = s.exitAt === null;
+            return `
+              <tr>
+                <td>${esc(s.name)}</td>
+                <td class="lap-mono">${esc(fmtWhen(s.entryAt))}</td>
+                <td class="lap-mono">${abierto ? `<span class="lap-badge lap-badge--warn">adentro</span>` : esc(fmtWhen(s.exitAt))}</td>
+                <td class="lap-mono"${abierto ? ` data-live-duration="${esc(s.entryAt)}"` : ""}>${esc(fmtDuration(shiftDuration(s, ahora)))}</td>
+                <td class="lap__rowactions">
+                  ${
+                    abierto
+                      ? `<button type="button" class="lap-btn lap-btn--ghost" data-action="shift-out" data-id="${esc(s.id)}"
+                          aria-label="Marcar la salida de ${esc(s.name)}">Marcar salida</button>`
+                      : ""
+                  }
+                  <button type="button" class="lap-btn lap-btn--ghost" data-action="shift-delete" data-id="${esc(s.id)}"
+                    aria-label="Borrar el registro de ${esc(s.name)}">Borrar</button>
+                </td>
+              </tr>`;
+          })
+          .join("")
+      : `<tr><td colspan="5" class="lap-dim">Todavía no hay entradas registradas.</td></tr>`;
+
+    return `
+      <div class="lap__toolbar">
+        <span class="lap__meta">${adentro.length} adentro ahora · ${state.shifts.length} registro${state.shifts.length === 1 ? "" : "s"}</span>
+      </div>
+      <details class="lap-add" open>
+        <summary>Marcar entrada</summary>
+        <form data-form="shift" novalidate>
+          <label>Persona
+            <input type="text" name="name" list="lap-people" maxlength="80" required
+              placeholder="Nombre y apellido" autocomplete="off" />
+            <datalist id="lap-people">
+              ${personas.map((p) => `<option value="${esc(p)}"></option>`).join("")}
+            </datalist>
+          </label>
+          <p class="lap-add__error" role="alert" hidden></p>
+          <button type="submit" class="lap-btn">Marcar entrada</button>
+        </form>
+      </details>
+      <div class="lap__tablewrap">
+        <table class="lap-table">
+          <thead><tr><th>Persona</th><th>Entrada</th><th>Salida</th><th>Duración</th><th></th></tr></thead>
+          <tbody>${filas}</tbody>
+        </table>
+      </div>`;
   }
 
   function historyView() {
@@ -233,6 +425,18 @@ export function mountAdminPanel({ store } = {}) {
       <div class="lap-drawer__stats">
         <div><strong class="lap-bignum">${repairs.length}</strong><span>reparaciones</span></div>
         <div><strong>${fmtDate(lastRepairDate(tool))}</strong><span>última reparación</span></div>
+      </div>
+
+      <div class="lap-drawer__stats">
+        <div><strong>${esc(fmtWhen(toolMovement(tool).outAt))}</strong><span>última salida</span></div>
+        <div><strong>${esc(fmtWhen(toolMovement(tool).inAt))}</strong><span>última entrada</span></div>
+      </div>
+      <div class="lap-drawer__actions">
+        ${
+          toolMovement(tool).fuera
+            ? `<button type="button" class="lap-btn" data-action="tool-in" data-id="${esc(tool.id)}">Marcar entrada</button>`
+            : `<button type="button" class="lap-btn" data-action="tool-out" data-id="${esc(tool.id)}">Marcar salida</button>`
+        }
       </div>
 
       <h4 class="lap-drawer__sub">Historial</h4>
@@ -277,20 +481,40 @@ export function mountAdminPanel({ store } = {}) {
 
   // ---------- Render ----------
   function render() {
-    titleEl.textContent = state.view === "tools" ? "Inventario de herramientas" : "Historial de reparaciones";
+    titleEl.textContent =
+      state.view === "tools"
+        ? "Inventario de herramientas"
+        : state.view === "history"
+          ? "Historial de reparaciones"
+          : state.view === "purchases"
+            ? "Pedidos de compra"
+            : "Entradas y salidas";
     root.querySelectorAll("[data-view]").forEach((b) => {
       const active = b.dataset.view === state.view;
       b.classList.toggle("is-active", active);
       b.toggleAttribute("aria-current", active);
     });
 
-    if (state.error) {
-      contentEl.innerHTML = `<p class="lap__state lap__state--error" role="alert">${esc(state.error)}</p>
-        <button type="button" class="lap-btn" data-action="retry">Reintentar</button>`;
-    } else if (state.loading && !state.tools.length) {
-      contentEl.innerHTML = `<p class="lap__state">Cargando…</p>`;
+    // El error no se queda como única pantalla: se muestra arriba y la vista
+    // igual se dibuja debajo, así compras y personal siguen siendo usables
+    // aunque el inventario no pueda cargarse.
+    const bloqueError = state.error
+      ? `<p class="lap__state lap__state--error" role="alert">${esc(state.error)}</p>
+         <button type="button" class="lap-btn" data-action="retry">Reintentar</button>`
+      : "";
+
+    if (state.loading && !state.tools.length) {
+      contentEl.innerHTML = `${bloqueError}<p class="lap__state">Cargando…</p>`;
     } else {
-      contentEl.innerHTML = state.view === "tools" ? toolsView() : historyView();
+      const vista =
+        state.view === "tools"
+          ? toolsView()
+          : state.view === "history"
+            ? historyView()
+            : state.view === "purchases"
+              ? purchasesView()
+              : shiftsView();
+      contentEl.innerHTML = bloqueError ? bloqueError + vista : vista;
     }
 
     const tool = state.tools.find((t) => t.id === state.selectedId);
@@ -304,14 +528,27 @@ export function mountAdminPanel({ store } = {}) {
     state.loading = true;
     state.error = "";
     render();
+
+    // El inventario va primero porque es el store que pide el token de admin y
+    // lo deja guardado en la sesión; compras y personal lo reutilizan y no
+    // tendrían con qué autenticarse si corriéramos al mismo tiempo.
     try {
       state.tools = await listTools();
     } catch (err) {
       state.error = err.message || "No se pudo cargar el inventario.";
-    } finally {
-      state.loading = false;
-      render();
     }
+
+    // Se cargan aparte del inventario: si compras o personal fallan, el panel
+    // igual tiene que mostrar sus datos y no arrastrar el error al resto.
+    const [purchases, shifts] = await Promise.all([
+      listPurchases().catch(() => []),
+      listShifts().catch(() => []),
+    ]);
+    state.purchases = purchases;
+    state.shifts = shifts;
+
+    state.loading = false;
+    render();
   }
 
   // ---------- Abrir / cerrar ----------
@@ -344,6 +581,64 @@ export function mountAdminPanel({ store } = {}) {
       await refresh();
     } catch (err) {
       state.error = err.message || "No se pudo eliminar la herramienta.";
+      render();
+    }
+  }
+
+  async function changePurchaseStatus(id, status) {
+    try {
+      await setPurchaseStatus(id, status);
+      await refresh();
+    } catch (err) {
+      state.error = err.message || "No se pudo cambiar el estado del pedido.";
+      render();
+    }
+  }
+
+  async function removePurchase(id) {
+    const pedido = state.purchases.find((p) => p.id === id);
+    if (!window.confirm(`¿Borrar el pedido de ${pedido?.name ?? "este artículo"}?`)) return;
+    try {
+      await deletePurchase(id);
+      await refresh();
+    } catch (err) {
+      state.error = err.message || "No se pudo borrar el pedido.";
+      render();
+    }
+  }
+
+  // ---------- Horarios ----------
+  // Salida y entrada de una herramienta del pañol. El store valida que no se
+  // pueda marcar dos veces la misma dirección.
+  async function moveTool(id, kind) {
+    try {
+      if (kind === "out") await markToolOut(id);
+      else await markToolIn(id);
+      await refresh();
+    } catch (err) {
+      state.error = err.message || "No se pudo registrar el movimiento.";
+      render();
+    }
+  }
+
+  async function closeShift(id) {
+    try {
+      await endShift(id);
+      await refresh();
+    } catch (err) {
+      state.error = err.message || "No se pudo marcar la salida.";
+      render();
+    }
+  }
+
+  async function removeShift(id) {
+    const registro = state.shifts.find((s) => s.id === id);
+    if (!window.confirm(`¿Borrar el registro de ${registro?.name ?? "esa persona"}?`)) return;
+    try {
+      await deleteShift(id);
+      await refresh();
+    } catch (err) {
+      state.error = err.message || "No se pudo borrar el registro.";
       render();
     }
   }
@@ -387,12 +682,36 @@ export function mountAdminPanel({ store } = {}) {
       case "delete-tool":
         removeTool(el.dataset.id);
         break;
+      case "purchase-status":
+        changePurchaseStatus(el.dataset.id, el.dataset.status);
+        break;
+      case "purchase-delete":
+        removePurchase(el.dataset.id);
+        break;
+      case "tool-out":
+        moveTool(el.dataset.id, "out");
+        break;
+      case "tool-in":
+        moveTool(el.dataset.id, "in");
+        break;
+      case "shift-out":
+        closeShift(el.dataset.id);
+        break;
+      case "shift-delete":
+        removeShift(el.dataset.id);
+        break;
       case "close-drawer":
         state.selectedId = null;
         render();
         break;
       case "retry":
         refresh();
+        break;
+      case "download-excel":
+        downloadExcel().catch((err) => {
+          state.error = err.message || "No se pudo descargar el Excel.";
+          render();
+        });
         break;
       case "close":
         close();
@@ -435,6 +754,29 @@ export function mountAdminPanel({ store } = {}) {
       return;
     }
 
+    const shiftForm = e.target.closest("[data-form=shift]");
+    if (shiftForm) {
+      e.preventDefault();
+      const errorEl = shiftForm.querySelector(".lap-add__error");
+      const submitBtn = shiftForm.querySelector("button[type=submit]");
+      errorEl.hidden = true;
+      submitBtn.disabled = true;
+
+      try {
+        await startShift({ name: new FormData(shiftForm).get("name") });
+        await refresh();
+        // render() reemplaza el form, así que hay que volver a buscarlo en el
+        // DOM: el nodo viejo quedó suelto y el foco no llegaría a ningún lado.
+        root.querySelector("[data-form=shift] input[name=name]")?.focus();
+      } catch (err) {
+        errorEl.textContent = err.message || "No se pudo marcar la entrada.";
+        errorEl.hidden = false;
+        submitBtn.disabled = false;
+        shiftForm.querySelector("input[name=name]")?.focus();
+      }
+      return;
+    }
+
     const form = e.target.closest("[data-form=repair]");
     if (!form) return;
     e.preventDefault();
@@ -465,6 +807,17 @@ export function mountAdminPanel({ store } = {}) {
       submitBtn.disabled = false;
     }
   });
+
+  // Mientras alguien está adentro, la duración tiene que moverse sola. Se
+  // actualizan solo esas celdas y no el panel entero, para no sacarle el foco
+  // a quien esté tipeando un nombre.
+  setInterval(() => {
+    if (root.hidden || state.view !== "shifts") return;
+    const ahora = Date.now();
+    root.querySelectorAll("[data-live-duration]").forEach((cell) => {
+      cell.textContent = fmtDuration(ahora - Number(cell.dataset.liveDuration));
+    });
+  }, 30000);
 
   // Esc cierra el cajón y después el panel; Tab queda dentro del panel
   document.addEventListener("keydown", (e) => {

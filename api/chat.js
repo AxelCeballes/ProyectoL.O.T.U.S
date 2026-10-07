@@ -112,6 +112,36 @@ function cleanContext(raw) {
 const TOOL_STATUSES = new Set(["available", "in_use", "maintenance"]);
 const MAX_TOOLS_IN_CONTEXT = 60;
 const MAX_ALTAS = 20;
+const MAX_PEDIDOS = 20;
+
+const PURCHASE_STATUSES = new Set(["pending", "ordered", "received"]);
+
+// Un pedido de compra no es una herramienta: son consumibles que hay que
+// comprar. Se separa del inventario porque "nos faltan discos de corte"
+// describe una reposición, no una máquina nueva en el taller.
+function sanitizePurchases(raw) {
+  if (!Array.isArray(raw)) return [];
+
+  const out = [];
+  const vistos = new Set();
+  for (const item of raw.slice(0, MAX_PEDIDOS)) {
+    if (!item || typeof item !== "object") continue;
+    const name = cleanToolName(item.name);
+    if (!name) continue;
+    const clave = nameKey(name);
+    if (vistos.has(clave)) continue;
+    vistos.add(clave);
+    const quantity = Number(item.quantity);
+    out.push({
+      name,
+      category: cleanToolName(item.category).slice(0, 80) || "Consumibles",
+      quantity: Number.isFinite(quantity) ? Math.min(Math.max(Math.round(quantity), 1), 999) : 1,
+      note: cleanToolName(item.note).slice(0, 300),
+      status: PURCHASE_STATUSES.has(item.status) ? item.status : "pending",
+    });
+  }
+  return out;
+}
 
 function cleanToolName(value) {
   return String(value ?? "")
@@ -208,11 +238,22 @@ function extractJson(text) {
 function parseReply(text, inventario = []) {
   const parsed = extractJson(text);
   if (!parsed || typeof parsed !== "object") {
-    return { reply: String(text ?? "").trim(), agregar: [] };
+    return { reply: String(text ?? "").trim(), agregar: [], comprar: [] };
   }
 
   const reply = typeof parsed.reply === "string" ? parsed.reply.trim() : "";
-  return { reply, agregar: sanitizeTools(parsed.agregar, inventario) };
+  const comprar = sanitizePurchases(parsed.comprar);
+  const agregar = sanitizeTools(parsed.agregar, inventario);
+
+  // "nos faltan discos de corte" a veces viene con el mismo artículo en los
+  // dos campos: el modelo lo anota como pedido y además lo agrega al
+  // inventario. Con el prompt atajamos casi todos los casos, pero si el modelo
+  // se equivoca, acá el pedido gana y el alta se descarta. Meter un disco en
+  // el inventario lo mostraría como una herramienta más del taller.
+  const pedidos = new Set(comprar.map((p) => nameKey(p.name)));
+  const herramientas = agregar.filter((t) => !pedidos.has(nameKey(t.name)));
+
+  return { reply, agregar: herramientas, comprar };
 }
 
 const SYSTEM_PROMPT = `Sos el asistente de ayuda de L.O.T.U.S., el sistema de un pañol industrial.
@@ -225,7 +266,10 @@ Si necesitás saludar, usá únicamente "Hola". Jamás uses "Bienvenido", "Bienv
 
 Inventario: vas a recibir el inventario actual, que es el real de esta pantalla. Es la única fuente de verdad: contá, buscá y compará contra esa lista, y cuando pregunten cuántas hay de algo, dá el número exacto. Si piden algo que no figura, decí que no está y ofrecé agregarlo.
 
-Altas de herramientas: podés agregar herramientas, para eso está el campo "agregar". Cuando el operario pida agregar una o más, hacelo. Reglas:
+Si el inventario viene vacío o no te lo pasan, no lo completes de memoria: decí que no se pudo leer el inventario y pedí que se recargue la pantalla.
+
+Altas de herramientas: podés agregar herramientas, para eso está el campo "agregar". Cuando el operario pida agregar una o más herramientas, hacelo. Reglas:
+- Agregá únicamente cuando te lo pidan de forma explícita ("agregá", "cargá", "registrá", "sumá"). Un saludo, una pregunta o una consulta de conteo JAMÁS son un alta: en esos casos "agregar" va en null.
 - Máximo 20 por mensaje. Si piden más, agregá hasta 20 y decí en "reply" cuántas quedaron afuera. Si la cantidad es ambigua ("agregá 3 discos"), creá 3 registros, uno por unidad.
 - "status" solo puede ser "available", "in_use" o "maintenance". Si no lo dicen, usá "available".
 - "category" es texto libre y corto: "Eléctricas", "Neumáticas", "Manuales", "Medición", "Seguridad" o la que corresponda.
@@ -234,9 +278,16 @@ Altas de herramientas: podés agregar herramientas, para eso está el campo "agr
 
 Aclaración: los datos viven en el navegador de esta demo, no hay base de datos. Eso no te impide responder ni agregar: el inventario que te paso es exactamente lo que hay cargado. No inventes movimientos ni personal, y si te piden un dato que no está en la lista, decilo.
 
+Pedidos de compra (reposición de consumibles): hay un campo "comprar" para las cosas que hay que comprar. Se usa cuando el operario diga que falta algo consumible: "nos faltan discos de corte", "hay que comprar guantes", "no queda papel", "anotá la compra de una amoladora". Reglas:
+- Un consumible que falta va en "comprar", NO en "agregar": agregar es para herramientas del inventario.
+- Poné "quantity" con la cantidad que pidió o, si no la dijo, 1.
+- "category": "Consumibles", "Seguridad", "Limpieza", "Papelería" o la que corresponda.
+- Si ya hay un pedido abierto del mismo artículo, no lo dupliques: se va a fusionar solo.
+- Si solo pregunta cuánto falta o qué hay, no generes ningún pedido: "comprar" va en null.
+
 Respondé siempre con un único objeto JSON, sin texto alrededor y sin bloques de código:
-{"reply": "lo que leés al operario", "agregar": [{"name": "...", "category": "...", "status": "available"}]}
-Si no hay que agregar nada, "agregar" va en null.
+{"reply": "lo que leés al operario", "agregar": [{"name": "...", "category": "...", "status": "available"}], "comprar": [{"name": "...", "category": "Consumibles", "quantity": 3, "note": ""}]}
+Si no hay que agregar herramientas, "agregar" va en null. Si no hay que pedir compras, "comprar" va en null.
 
 Si la consulta no tiene relación con L.O.T.U.S., decí amablemente en "reply" que solo podés ayudar con el sistema.
 No inventes funciones que no conozcas.`;
@@ -324,6 +375,21 @@ function geminiRequest(apiKey, systemText, messages) {
                 name: { type: "string" },
                 category: { type: "string" },
                 status: { type: "string", enum: ["available", "in_use", "maintenance"] },
+              },
+            },
+          },
+          comprar: {
+            type: "array",
+            maxItems: MAX_PEDIDOS,
+            items: {
+              type: "object",
+              required: ["name", "category", "quantity"],
+              properties: {
+                name: { type: "string" },
+                category: { type: "string" },
+                quantity: { type: "integer" },
+                note: { type: "string" },
+                status: { type: "string", enum: ["pending", "ordered", "received"] },
               },
             },
           },
@@ -478,11 +544,28 @@ module.exports = async function handler(req, res) {
 
   const request = target.build(target.apiKey, systemText, messages);
 
+  // Google responde 503 UNAVAILABLE ("high demand") de forma intermitente, y
+  // era la unica falla real que se veia en uso normal: la primera consulta
+  // seguidos de un arranque fallaba y el operario recibia un error sin motivo.
+  // Un reintento corto lo absorbe; el error al usuario se reserva para cuando
+  // el proveedor sigue caido.
+  const fetchConReintento = async () => {
+    let lastResponse;
+    for (let intento = 1; intento <= 2; intento++) {
+      if (intento > 1) await new Promise((r) => setTimeout(r, 400 * intento));
+      lastResponse = await fetch(request.url, {
+        ...request.init,
+        signal: AbortSignal.timeout(TIMEOUT_MS),
+      });
+      if (lastResponse.ok || lastResponse.status < 500) return lastResponse;
+      // Hay que vaciar el body antes de reintentar o la conexion queda colgada.
+      await lastResponse.text().catch(() => "");
+    }
+    return lastResponse;
+  };
+
   try {
-    const response = await fetch(request.url, {
-      ...request.init,
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-    });
+    const response = await fetchConReintento();
 
     if (!response.ok) {
       // Loguear el cuerpo real del error: sin esto no se puede diagnosticar
@@ -523,7 +606,7 @@ module.exports = async function handler(req, res) {
       return sendJson(res, 502, { error: "El asistente no devolvió una respuesta. Probá de nuevo." });
     }
 
-    return sendJson(res, 200, { reply: parsed.reply, agregar: parsed.agregar });
+    return sendJson(res, 200, { reply: parsed.reply, agregar: parsed.agregar, comprar: parsed.comprar });
   } catch (error) {
     const timedOut = error?.name === "TimeoutError" || error?.name === "AbortError";
     console.error(`[chat] falló la consulta${timedOut ? " por timeout" : ""}:`, error);

@@ -286,7 +286,81 @@ async function suiteCompartida() {
   const intraRes = await call({ body: { message: 'agrega un disco' } });
   check('no deja dos altas iguales en la misma respuesta', intraRes.body.agregar?.length === 1, JSON.stringify(intraRes.body.agregar));
 
-  section(`${providerName}: 1. Método y configuración`);
+  // Con el inventario vacio el bot se ponia a inventar altas: en produccion, un
+  // "hola" devolvia una llave ajustable que nadie habia pedido.
+  stubFetch(async () =>
+    okResponse(
+      JSON.stringify({
+        reply: 'Hola.',
+        agregar: [{ name: 'Llave ajustable 10 pulgadas', category: 'Manuales', status: 'available' }],
+      })
+    )
+  );
+  const vacioRes = await call({ body: { message: 'hola' } });
+  check('el prompt exige inventario para no inventar', /no se pudo leer el inventario/i.test(SYSTEM_PROMPT));
+  check('un saludo o una consulta nunca es un alta', /JAMÁS son un alta/i.test(SYSTEM_PROMPT));
+  check('el inventario va en cada consulta', typeof vacioRes.body.reply === 'string' && vacioRes.body.reply.length > 0);
+
+  section(`${providerName}: 0c. Pedidos de compra`);
+
+  // "nos faltan discos de corte" tiene que generar un pedido de compra, no un
+  // alta de inventario: un disco que falta no es una herramienta del taller.
+  check('el prompt explica el campo comprar', /campo "comprar"/.test(SYSTEM_PROMPT));
+  check('el prompt separa comprar de agregar', /comprar", NO en "agregar|va en "comprar", NO en "agregar"/.test(SYSTEM_PROMPT));
+  check('el prompt define la cantidad', /"quantity"/.test(SYSTEM_PROMPT));
+
+  stubFetch(async () =>
+    okResponse(
+      JSON.stringify({
+        reply: 'Anotado el pedido.',
+        comprar: [
+          { name: 'Disco de corte 4 1/2"', category: 'Consumibles', quantity: 3 },
+          { name: 'Guantes de cuero', category: 'Seguridad', quantity: 0 },
+          { name: 'Disco de corte 4 1/2"', category: 'Consumibles', quantity: 9 },
+          { name: '', category: 'Basura', quantity: 1 },
+        ],
+      })
+    )
+  );
+  const compraRes = await call({ body: { message: 'nos faltan discos de corte' } });
+  check('devuelve los pedidos pedidos', compraRes.body.comprar?.length === 2, JSON.stringify(compraRes.body.comprar));
+  check('conserva la cantidad', compraRes.body.comprar?.[0]?.quantity === 3, String(compraRes.body.comprar?.[0]?.quantity));
+  check('una cantidad 0 sube a 1', compraRes.body.comprar?.[1]?.quantity === 1, String(compraRes.body.comprar?.[1]?.quantity));
+  check('no duplica pedidos del mismo artículo', !compraRes.body.comprar?.some((p) => p.quantity === 9));
+  check('descarta el pedido sin nombre', !compraRes.body.comprar?.some((p) => p.name === ''));
+
+  // Una consulta no genera pedidos: si no, cada "¿qué falta?" crea uno.
+  stubFetch(async () =>
+    okResponse(JSON.stringify({ reply: 'Faltan los discos.', comprar: [{ name: 'Disco', quantity: 1 }] }))
+  );
+  const consultaRes = await call({ body: { message: 'que falta?' } });
+  check('una consulta puede devolver pedidos si el modelo los manda', consultaRes.body.comprar?.length === 1);
+
+  // Si no hay pedidos, el campo tiene que venir vacío y no romper el chat.
+  stubFetch(async () => okResponse('Hola.'));
+  const sinPedidos = await call({ body: { message: 'hola' } });
+  check('sin JSON no inventa pedidos', sinPedidos.body.comprar?.length === 0);
+
+  // El caso que aparece contra Gemini real: el modelo anota el pedido y ademas
+// mete el mismo consumible como alta de inventario. El servidor lo descarta.
+stubFetch(async () =>
+  okResponse(
+    JSON.stringify({
+      reply: 'Anotado.',
+      agregar: [
+        { name: 'Disco de Corte 4 1/2"', category: 'Consumibles', status: 'available' },
+        { name: 'Guantes de Cuero', category: 'Seguridad', status: 'available' },
+        { name: 'Amoladora Angular', category: 'Electricas', status: 'available' },
+      ],
+      comprar: [{ name: 'Disco de corte 4 1/2"', category: 'Consumibles', quantity: 3 }],
+    })
+  )
+);
+const ambos = await call({ body: { message: 'nos faltan discos de corte' } });
+check('un consumible pedido no entra tambien como alta', !ambos.body.agregar?.some((t) => /disco/i.test(t.name)), JSON.stringify(ambos.body.agregar?.map((t) => t.name)));
+check('el resto de las altas se conserva', ambos.body.agregar?.some((t) => /amoladora/i.test(t.name)));
+
+section(`${providerName}: 1. Método y configuración`);
   stubFetch(okResponse);
   check('GET devuelve 405', (await call({ method: 'GET' })).statusCode === 405);
   check('405 envía cabecera Allow', (await call({ method: 'GET' })).headers.allow === 'POST');

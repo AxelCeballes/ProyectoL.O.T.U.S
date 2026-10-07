@@ -8,9 +8,11 @@ Guía rápida para el equipo de Falmet y pañol industrial.
 
 ## ¿Para qué sirve?
 
-Es una demostración de una pantalla para retirar y devolver herramientas del pañol de **L.O.T.U.S. SOLUTIONS** (*Logic Optimization & Technology Unified Solutions*). Permite recorrer el flujo y consultar una lista de herramientas de ejemplo.
+Es una web para consultar y administrar herramientas del pañol de **Falmet**. El inventario compartido se guarda en el servidor y el Excel se actualiza automáticamente cada vez que se agrega, elimina o modifica una herramienta o reparación.
 
-Los datos que aparecen son ficticios. La página no registra movimientos reales ni se conecta a una base de datos. El asistente de ayuda sí envía las consultas a la API de Anthropic.
+El libro se guarda en `data/falmet-inventario.xlsx` e incluye las hojas **Inventario** y **Reparaciones**. El panel permite descargar la copia más reciente.
+
+La pantalla de retiro y devolución todavía muestra datos de ejemplo. El Panel Admin usa el inventario persistente cuando la web se sirve desde Node; el asistente de ayuda envía consultas al proveedor configurado.
 
 ---
 
@@ -32,17 +34,30 @@ Los datos que aparecen son ficticios. La página no registra movimientos reales 
 
 ## 🖥️ Cómo probarla
 
-1. Abra `index.html` en cualquier navegador web moderno (Chrome, Edge, Firefox, Safari).
+1. Abra `index.html` para recorrer la demo visual, o `http://localhost:3000` para usar el inventario compartido.
 2. Presione `Enter` o el botón de simulación para avanzar desde la pantalla de ingreso.
 3. Elija retiro o devolución y presione `Enter` para disparar la lectura del código.
 4. Use «Estado de herramientas» para consultar el inventario de ejemplo y filtrar por estado o nombre.
 5. Use el botón «Sonidos» del encabezado para probar individualmente los sintetizadores de audio.
 
+## Inventario compartido y Excel
+
+El servidor Node incluido conserva el inventario en `data/tools.json` y regenera el Excel después de cada cambio. La carpeta `data/` queda fuera de Git para no subir datos de la empresa al repositorio.
+
+1. En `.env.local`, agregá `ADMIN_TOKEN=` seguido de una clave larga y privada. No uses la contraseña visual `falmet` como token.
+2. Iniciá la aplicación con `npm start`.
+3. Abrí `http://localhost:3000`, entrá al Panel Admin con la clave visual `falmet` y, cuando lo pida, ingresá el `ADMIN_TOKEN`.
+4. Agregá herramientas o reparaciones. Se guardan en el servidor y el Excel se regenera en el momento. Usá **Descargar Excel** para compartirlo.
+
+Para que todo Falmet use el mismo registro, alojá esta aplicación Node en un servidor de la empresa con disco persistente y respaldá la carpeta `data/`. En ese servidor configurá `HOST=0.0.0.0` y protegé el acceso con HTTPS en la red de la empresa. La publicación estática actual de Vercel no puede conservar archivos escritos por la aplicación: al desplegar allí, hace falta conectar una base de datos externa persistente y adaptar el backend. No cargues datos reales en esa publicación estática.
+
+La contraseña visual `falmet` está en el código público y no protege por sí sola los datos del servidor.
+
 ## Panel de administración y reparaciones
 
-El botón «Panel Admin» solicita la contraseña `falmet` antes de abrir el inventario de ejemplo, donde se pueden consultar y registrar reparaciones. Esta clave está en el JavaScript público del navegador y solo sirve como bloqueo visual de la demo; no reemplaza autenticación segura. En modo local, los cambios se guardan en `localStorage` del navegador y solo existen en ese navegador. No son datos compartidos ni un registro real.
+El botón «Panel Admin» solicita la contraseña visual `falmet` y luego el token del servidor. La contraseña visual está en el código público y no protege por sí sola los datos. Si se abre `index.html` directamente, el panel queda en modo de demostración local.
 
-`repairs-router.js` es una opción independiente para un servidor Express propio; no se usa en el despliegue estático de Vercel. Para persistencia compartida en producción, conecte el panel a una base de datos y agregue autenticación de administrador antes de habilitar escrituras.
+`repairs-router.js` es una implementación anterior para Express. El servidor incluido en `scripts/dev-server.mjs` es el que usa esta versión.
 
 ## Desarrollo
 

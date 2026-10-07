@@ -810,10 +810,20 @@
 
 // El servidor no ve el inventario: vive en este navegador. Sin esto la
     // pregunta "cuantas moladoras hay" la responde inventando.
+    //
+    // Si el inventario no se puede leer (el servidor de inventario no esta, o
+    // el navegador esta en modo privado), el chat igual tiene que funcionar:
+    // se manda la lista vacia y el bot responde sin inventar. Antes el error
+    // cortaba la consulta entera y el operario se quedaba sin respuesta.
     async function inventarioParaElChat() {
       const puente = window.__LOTUS_INVENTARIO__;
       if (!puente) return [];
-      return puente.cargar();
+      try {
+        return await puente.cargar();
+      } catch (error) {
+        console.warn('No se pudo leer el inventario para el chat:', error);
+        return [];
+      }
     }
 
     async function sendChatMessage(event) {
@@ -830,6 +840,10 @@
         const response = await fetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          // Sin este limite, una peticion que nunca responde deja la burbuja en
+          // "Estoy pensando" para siempre y el operario no tiene ni error ni
+          // boton de reintentar. 45s es mas que cualquier respuesta normal.
+          signal: AbortSignal.timeout(45000),
           body: JSON.stringify({
             message,
             // El historial se arma recién con lo que el servidor confirmó:
@@ -1403,6 +1417,7 @@
   <script type="module">
     import { mountAdminPanel } from './admin-panel.js';
     import { listTools, addTool } from './repairs-store.js';
+import { listPurchases, addPurchase } from './purchases-store.js';
 
     mountAdminPanel();
 
@@ -1419,21 +1434,64 @@
       const agregadas = [];
       const rechazadas = [];
 
-      for (const item of Array.isArray(lista) ? lista.slice(0, 3) : []) {
+for (const item of Array.isArray(lista) ? lista.slice(0, 20) : []) {
+      const name = String(item?.name ?? '').trim();
+      if (!name) continue;
+      try {
+        agregadas.push(await addTool({
+          id: String(item?.id ?? '').trim() || nuevoId(),
+          name,
+          category: String(item?.category ?? '').trim() || 'Sin categoría',
+          status: item?.status ?? 'available',
+        }));
+      } catch (error) {
+        rechazadas.push(error.message);
+      }
+    }
+    return { agregadas, rechazadas };
+  }
+
+    // Los pedidos de compra van a su propia lista, no al inventario de
+    // herramientas: un disco de corte que falta no es una máquina del taller.
+    async function aplicarPedidos(lista) {
+      const pedidos = [];
+      const rechazados = [];
+
+      for (const item of Array.isArray(lista) ? lista.slice(0, 20) : []) {
         const name = String(item?.name ?? '').trim();
         if (!name) continue;
         try {
-          agregadas.push(await addTool({
-            id: String(item?.id ?? '').trim() || nuevoId(),
+          pedidos.push(await addPurchase({
             name,
-            category: String(item?.category ?? '').trim() || 'Sin categoría',
-            status: item?.status ?? 'available',
+            category: String(item?.category ?? '').trim() || 'Consumibles',
+            quantity: Number(item?.quantity) || 1,
+            note: String(item?.note ?? '').trim(),
           }));
-        } catch (error) {
-          rechazadas.push(error.message);
+// Pedidos de compra: "nos faltan discos" genera un pedido, no un alta.
+        if (Array.isArray(data.comprar) && data.comprar.length) {
+          const puenteCompras = window.__LOTUS_COMPRAS__;
+          const { pedidos, rechazados } = puenteCompras
+            ? await puenteCompras.aplicar(data.comprar)
+            : { pedidos: [], rechazados: ['no se pudo acceder a la lista de compras'] };
+
+          if (pedidos.length) {
+            const detalle = pedidos
+              .map((p) => `${p.name} x${p.quantity}`)
+              .join(', ');
+            appendChatMessage(`Pedido de compra: ${detalle}.`, 'assistant');
+          }
+          if (rechazados.length) {
+            appendChatMessage(
+              `No pude anotar ${rechazados.length > 1 ? 'estos pedidos' : 'este pedido'}: ${rechazados.join('; ')}`,
+              'assistant'
+            );
+          }
+        }
+      } catch (error) {
+          rechazados.push(error.message);
         }
       }
-      return { agregadas, rechazadas };
+      return { pedidos, rechazados };
     }
 
     // El chat vive en un script clasico, asi que se le expone lo minimo.
@@ -1453,6 +1511,17 @@
         }
       },
       aplicar: aplicarAltas,
+    };
+
+    window.__LOTUS_COMPRAS__ = {
+      async cargar() {
+        try {
+          return await listPurchases();
+        } catch {
+          return [];
+        }
+      },
+      aplicar: aplicarPedidos,
     };
   </script>
 </body>

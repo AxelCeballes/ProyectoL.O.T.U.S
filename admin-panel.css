@@ -353,6 +353,43 @@
 .lap-btn:hover:not(:disabled) { background: rgba(255, 46, 151, 0.25); box-shadow: 0 0 12px rgba(255, 46, 151, 0.5); }
 .lap-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
+/* Botones chicos de fila: marcar un pedido comprado, borrarlo, etc. */
+.lap-btn--ghost {
+  align-self: center;
+  padding: 5px 10px;
+  font-size: 12px;
+  color: var(--lap-muted);
+  background: transparent;
+  border-color: var(--lap-line);
+  border-radius: 6px;
+}
+.lap-btn--ghost:hover:not(:disabled) {
+  color: var(--lap-cyan);
+  background: rgba(0, 240, 255, 0.08);
+  box-shadow: none;
+}
+
+/* Las celdas con acciones no son clickeables como el resto de la fila. */
+.lap__rowactions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+.lap-table tbody tr:has(.lap__rowactions) { cursor: default; }
+.lap-table tbody tr:has(.lap__rowactions):hover { background: none; }
+
+.lap__sub {
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--lap-muted);
+}
+.lap__sub + .lap__sub { margin-top: 26px; }
+
+/* Salida y entrada de cada herramienta, una debajo de la otra. */
+.lap-hours { display: flex; flex-direction: column; gap: 2px; line-height: 1.3; white-space: nowrap; }
+
+/* Acciones del cajón lateral de una herramienta. */
+.lap-drawer__actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+
 /* ---------- Móvil ---------- */
 @media (max-width: 720px) {
   .lap__shell { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }

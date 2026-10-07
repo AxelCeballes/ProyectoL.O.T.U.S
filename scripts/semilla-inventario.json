@@ -1,0 +1,23 @@
+[
+  {
+    "id": "LOTUS-84920",
+    "name": "Taladro Percutor Inalámbrico Bosch 18V",
+    "category": "Eléctricas",
+    "status": "in_use",
+    "repairs": [
+      { "id": "seed-1", "date": "2026-03-12", "reason": "Reemplazo de carbones del motor", "technician": "M. Díaz", "notes": "" },
+      { "id": "seed-2", "date": "2026-07-02", "reason": "Mandril flojo", "technician": "M. Díaz", "notes": "Se ajustó y se cambió el seguro." }
+    ]
+  },
+  {
+    "id": "LOTUS-55102",
+    "name": "Amoladora Angular 4 1/2\" DeWalt",
+    "category": "Eléctricas",
+    "status": "maintenance",
+    "repairs": [
+      { "id": "seed-3", "date": "2026-05-20", "reason": "Cable de alimentación dañado", "technician": "R. Sosa", "notes": "Cable reemplazado completo." }
+    ]
+  },
+  { "id": "LOTUS-31877", "name": "Llave de Impacto Neumática 1/2\"", "category": "Neumáticas", "status": "available", "repairs": [] },
+  { "id": "LOTUS-20463", "name": "Sierra Circular Makita 7 1/4\"", "category": "Eléctricas", "status": "available", "repairs": [] }
+]
