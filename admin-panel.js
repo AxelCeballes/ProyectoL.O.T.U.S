@@ -35,18 +35,25 @@ import {
 } from "./purchases-store.js";
 
 const STATUS = {
-  available: { label: "Disponible", cls: "ok" },
-  in_use: { label: "En uso", cls: "use" },
-  maintenance: { label: "En mantenimiento", cls: "warn" },
+  available: { label: "estadoDisponible", cls: "ok" },
+  in_use: { label: "estadoEnUso", cls: "use" },
+  maintenance: { label: "estadoEnMantenimiento", cls: "warn" },
 };
 
 // Los pedidos de compra tienen sus propios estados: un consumible que hay que
 // comprar no está ni disponible ni en mantenimiento.
 const PURCHASE_STATUS = {
-  pending: { label: "Pedido", cls: "warn" },
-  ordered: { label: "Comprado", cls: "use" },
-  received: { label: "Recibido", cls: "ok" },
+  pending: { label: "pedidoEstado", cls: "warn" },
+  ordered: { label: "compradoEstado", cls: "use" },
+  received: { label: "recibidoEstado", cls: "ok" },
 };
+
+// Traducciones: el panel corre como módulo y i18n.js ya cargó en el <head>.
+// Las claves del label quedan guardadas en los maps de arriba y se resuelven
+// recién al dibujar, así el cambio de idioma repinta todo con render().
+// Se llama `tr` (no `t`) para no pisar la variable de herramienta en los map.
+const tr = (...args) => (window.LOTUS_I18N ? window.LOTUS_I18N.t(...args) : args[0]);
+const loc = () => (window.LOTUS_I18N ? window.LOTUS_I18N.locale() : "es-AR");
 
 const ADMIN_PASSWORD = "falmet";
 
@@ -57,7 +64,7 @@ const esc = (value) =>
 function fmtDate(iso) {
   if (!iso) return "—";
   const [y, m, d] = iso.split("-").map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" });
+  return new Date(y, m - 1, d).toLocaleDateString(loc(), { day: "2-digit", month: "short", year: "numeric" });
 }
 
 function todayISO() {
@@ -70,7 +77,7 @@ const sameDay = (a, b) => new Date(a).toDateString() === new Date(b).toDateStrin
 
 function fmtTime(ms) {
   if (!ms) return "—";
-  return new Date(ms).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
+  return new Date(ms).toLocaleTimeString(loc(), { hour: "2-digit", minute: "2-digit" });
 }
 
 /** "04/10 14:20", con el día solo si no es hoy: hoy ya lo dice el reloj. */
@@ -85,19 +92,19 @@ function fmtWhen(ms) {
 function fmtDuration(ms) {
   if (ms < 0) return "—";
   const min = Math.floor(ms / 60000);
-  if (min < 1) return "menos de 1 m";
+  if (min < 1) return tr("menosDe1m");
   const h = Math.floor(min / 60);
   return h ? `${h} h ${min % 60} m` : `${min} m`;
 }
 
 const badge = (status) => {
-  const s = STATUS[status] ?? { label: status, cls: "use" };
-  return `<span class="lap-badge lap-badge--${s.cls}">${esc(s.label)}</span>`;
+  const s = STATUS[status] ?? { label: null, cls: "use" };
+  return `<span class="lap-badge lap-badge--${s.cls}">${esc(s.label ? tr(s.label) : status)}</span>`;
 };
 
 const purchaseBadge = (status) => {
-  const s = PURCHASE_STATUS[status] ?? { label: status, cls: "use" };
-  return `<span class="lap-badge lap-badge--${s.cls}">${esc(s.label)}</span>`;
+  const s = PURCHASE_STATUS[status] ?? { label: null, cls: "use" };
+  return `<span class="lap-badge lap-badge--${s.cls}">${esc(s.label ? tr(s.label) : status)}</span>`;
 };
 
 export function mountAdminPanel({ store } = {}) {
@@ -122,6 +129,8 @@ export function mountAdminPanel({ store } = {}) {
   launcher.className = "lap-launcher";
   launcher.setAttribute("aria-label", "Abrir panel de administración");
   launcher.title = "Panel de administración";
+  launcher.setAttribute("data-i18n-aria", "adminAbrir");
+  launcher.setAttribute("data-i18n-title", "panelAdmin");
   launcher.innerHTML = `
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 3l8 4v5c0 4.5-3.1 7.7-8 9-4.9-1.3-8-4.5-8-9V7l8-4z"/>
@@ -134,14 +143,14 @@ export function mountAdminPanel({ store } = {}) {
   authDialog.setAttribute("aria-labelledby", "lap-auth-title");
   authDialog.innerHTML = `
     <form class="lap-auth__form">
-      <h2 id="lap-auth-title">Acceso de administrador</h2>
-      <p>Ingresá la contraseña para abrir el panel.</p>
-      <label for="lap-auth-password">Contraseña</label>
+      <h2 id="lap-auth-title" data-i18n="authTitulo">Acceso de administrador</h2>
+      <p data-i18n="authDesc">Ingresá la contraseña para abrir el panel.</p>
+      <label for="lap-auth-password" data-i18n="authPassword">Contraseña</label>
       <input id="lap-auth-password" name="password" type="password" autocomplete="current-password" required>
-      <p class="lap-auth__error" role="alert" hidden>La contraseña es incorrecta.</p>
+      <p class="lap-auth__error" role="alert" hidden data-i18n="authIncorrecta">La contraseña es incorrecta.</p>
       <div class="lap-auth__actions">
-        <button type="button" class="lap-auth__cancel">Cancelar</button>
-        <button type="submit" class="lap-auth__submit">Ingresar</button>
+        <button type="button" class="lap-auth__cancel" data-i18n="authCancelar">Cancelar</button>
+        <button type="submit" class="lap-auth__submit" data-i18n="authIngresar">Ingresar</button>
       </div>
     </form>`;
 
@@ -152,20 +161,20 @@ export function mountAdminPanel({ store } = {}) {
     <div class="lap__shell" role="dialog" aria-modal="true" aria-labelledby="lap-title">
       <nav class="lap__sidebar" aria-label="Administración">
         <div class="lap__brand">L.O.T.U.S<span>Panel Admin</span></div>
-        <button type="button" class="lap__nav" data-action="nav" data-view="tools">Herramientas</button>
-        <button type="button" class="lap__nav" data-action="nav" data-view="history">Reparaciones</button>
-        <button type="button" class="lap__nav" data-action="nav" data-view="purchases">Compras</button>
-        <button type="button" class="lap__nav" data-action="nav" data-view="shifts">Personal</button>
-        <button type="button" class="lap__nav lap__nav--exit" data-action="close">Volver al terminal</button>
+        <button type="button" class="lap__nav" data-action="nav" data-view="tools" data-i18n="navHerramientas">Herramientas</button>
+        <button type="button" class="lap__nav" data-action="nav" data-view="history" data-i18n="navReparaciones">Reparaciones</button>
+        <button type="button" class="lap__nav" data-action="nav" data-view="purchases" data-i18n="navCompras">Compras</button>
+        <button type="button" class="lap__nav" data-action="nav" data-view="shifts" data-i18n="navPersonal">Personal</button>
+        <button type="button" class="lap__nav lap__nav--exit" data-action="close" data-i18n="navVolver">Volver al terminal</button>
       </nav>
       <main class="lap__main">
         <header class="lap__head">
           <h2 id="lap-title" class="lap__title"></h2>
-          <button type="button" class="lap__x" data-action="close" aria-label="Cerrar panel">✕</button>
+          <button type="button" class="lap__x" data-action="close" aria-label="Cerrar panel" data-i18n-aria="cerrarPanelAria">✕</button>
         </header>
         <div class="lap__content"></div>
       </main>
-      <aside class="lap__drawer" hidden aria-label="Historial de reparaciones"></aside>
+      <aside class="lap__drawer" hidden aria-label="Historial de reparaciones" data-i18n-aria="drawerAria"></aside>
     </div>`;
 
   const headerControls = document.querySelector("header > div:last-child");
@@ -184,20 +193,20 @@ export function mountAdminPanel({ store } = {}) {
   // ---------- Vistas ----------
   function tableHTML() {
     if (!state.tools.length) {
-      return `<p class="lap__state">Todavía no hay herramientas cargadas.</p>`;
+      return `<p class="lap__state">${tr("emptyTools")}</p>`;
     }
     const q = state.query.trim().toLowerCase();
     const rows = state.tools.filter((t) =>
       !q || [t.id, t.name, t.category].some((v) => String(v ?? "").toLowerCase().includes(q))
     );
-    if (!rows.length) return `<p class="lap__state">Ninguna herramienta coincide con la búsqueda.</p>`;
+    if (!rows.length) return `<p class="lap__state">${tr("sinCoincidencia")}</p>`;
 
     return `
       <table class="lap-table">
         <thead>
           <tr>
-            <th>ID</th><th>Herramienta</th><th>Categoría</th><th>Estado</th>
-            <th>Horario</th><th>Reparaciones</th><th>Últ. reparación</th><th>Acciones</th>
+            <th>ID</th><th>${tr("herramienta")}</th><th>${tr("thCategoria")}</th><th>${tr("estado")}</th>
+            <th>${tr("thHorario")}</th><th>${tr("thReparaciones")}</th><th>${tr("thUltReparacion")}</th><th>${tr("thAcciones")}</th>
           </tr>
         </thead>
         <tbody>
@@ -212,24 +221,24 @@ export function mountAdminPanel({ store } = {}) {
                 <td>${esc(t.category)}</td>
                 <td>${badge(t.status)}</td>
                 <td class="lap-mono lap-dim lap-hours">
-                  <span>sal ${esc(fmtWhen(outAt))}</span>
-                  <span>ent ${esc(fmtWhen(inAt))}</span>
+                  <span>${tr("sal")} ${esc(fmtWhen(outAt))}</span>
+                  <span>${tr("ent")} ${esc(fmtWhen(inAt))}</span>
                 </td>
                 <td>
                   <button type="button" class="lap-count${n === 0 ? " lap-count--zero" : ""}" data-action="open-tool" data-id="${esc(t.id)}"
-                    aria-label="Ver historial de ${esc(t.name)}: ${n} reparaciones">${n}</button>
+                    aria-label="${esc(tr("verHistorialAria", { name: t.name, n }))}">${n}</button>
                 </td>
                 <td>${fmtDate(lastRepairDate(t))}</td>
                 <td class="lap__rowactions">
                   ${
                     fuera
                       ? `<button type="button" class="lap-btn lap-btn--ghost" data-action="tool-in" data-id="${esc(t.id)}"
-                          aria-label="Marcar la entrada de ${esc(t.name)}">Entrar</button>`
+                          aria-label="${esc(tr("marcarEntradaAria", { name: t.name }))}">${tr("marcarEntrada")}</button>`
                       : `<button type="button" class="lap-btn lap-btn--ghost" data-action="tool-out" data-id="${esc(t.id)}"
-                          aria-label="Marcar la salida de ${esc(t.name)}">Salir</button>`
+                          aria-label="${esc(tr("marcarSalidaAria", { name: t.name }))}">${tr("marcarSalida")}</button>`
                   }
                   <button type="button" class="lap-delete-btn" data-action="delete-tool" data-id="${esc(t.id)}"
-                    aria-label="Eliminar ${esc(t.name)}">Eliminar</button>
+                    aria-label="${esc(tr("eliminarAria", { name: t.name }))}">${tr("eliminar")}</button>
                 </td>
               </tr>`;
             })
@@ -242,32 +251,32 @@ export function mountAdminPanel({ store } = {}) {
     const total = state.tools.reduce((sum, t) => sum + repairCount(t), 0);
     return `
       <div class="lap__toolbar">
-        <input type="search" id="lap-search" class="lap__search" placeholder="Buscar por nombre, ID o categoría"
-          value="${esc(state.query)}" aria-label="Buscar herramienta" />
-        <span class="lap__meta">${state.tools.length} herramientas · ${total} reparaciones</span>
-        <button type="button" class="lap-btn" data-action="download-excel">Descargar Excel</button>
+        <input type="search" id="lap-search" class="lap__search" placeholder="${tr("buscarPanelPlaceholder")}"
+          value="${esc(state.query)}" aria-label="${tr("buscarAria")}" />
+        <span class="lap__meta">${tr("metaHerramientas", { tools: state.tools.length, repairs: total })}</span>
+        <button type="button" class="lap-btn" data-action="download-excel">${tr("descargarExcel")}</button>
       </div>
       <details class="lap-add">
-        <summary>Agregar herramienta</summary>
+        <summary>${tr("agregarHerramienta")}</summary>
         <form data-form="tool" novalidate>
-          <label>ID
-            <input type="text" name="id" maxlength="64" required placeholder="Ej: LOTUS-12345" />
+          <label>${tr("labelId")}
+            <input type="text" name="id" maxlength="64" required placeholder="${tr("phId")}" />
           </label>
-          <label>Nombre
-            <input type="text" name="name" maxlength="120" required placeholder="Nombre de la herramienta" />
+          <label>${tr("labelNombre")}
+            <input type="text" name="name" maxlength="120" required placeholder="${tr("phNombre")}" />
           </label>
-          <label>Categoría
-            <input type="text" name="category" maxlength="80" placeholder="Ej: Eléctricas" />
+          <label>${tr("labelCategoria")}
+            <input type="text" name="category" maxlength="80" placeholder="${tr("phCategoria")}" />
           </label>
-          <label>Estado inicial
+          <label>${tr("labelEstadoInicial")}
             <select name="status">
-              <option value="available">Disponible</option>
-              <option value="in_use">En uso</option>
-              <option value="maintenance">En mantenimiento</option>
+              <option value="available">${tr("estadoDisponible")}</option>
+              <option value="in_use">${tr("estadoEnUso")}</option>
+              <option value="maintenance">${tr("estadoEnMantenimiento")}</option>
             </select>
           </label>
           <p class="lap-add__error" role="alert" hidden></p>
-          <button type="submit" class="lap-btn">Guardar herramienta</button>
+          <button type="submit" class="lap-btn">${tr("guardarHerramienta")}</button>
         </form>
       </details>
       <div class="lap__tablewrap" id="lap-table">${tableHTML()}</div>`;
@@ -285,7 +294,7 @@ export function mountAdminPanel({ store } = {}) {
     if (total === 0) {
       return `<div class="mb-4 flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
         <svg class="h-5 w-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/></svg>
-        <span><strong>Todo al día.</strong> No falta nada pendiente de compra.</span>
+        <span>${tr("todoAlDia")}</span>
       </div>`;
     }
 
@@ -293,16 +302,16 @@ export function mountAdminPanel({ store } = {}) {
       items
         .slice(0, 8)
         .map((p) => `${esc(p.name)} (x${Number(p.quantity)})`)
-        .join(", ") + (items.length > 8 ? ` y ${items.length - 8} más` : "");
+        .join(", ") + (items.length > 8 ? tr("yMas", { extra: items.length - 8 }) : "");
 
     const partes = [];
-    if (pendientes.length) partes.push(`<strong>Faltan:</strong> ${listar(pendientes)}`);
-    if (enCamino.length) partes.push(`<strong>Ya en camino:</strong> ${listar(enCamino)}`);
+    if (pendientes.length) partes.push(tr("faltan", { items: listar(pendientes) }));
+    if (enCamino.length) partes.push(tr("yaEnCamino", { items: listar(enCamino) }));
 
     return `<div class="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
       <div class="flex items-center gap-3">
         <svg class="h-5 w-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4"/><path d="M12 17h.01"/><circle cx="12" cy="12" r="10"/></svg>
-        <span><strong>${total > 1 ? `${total} artículos` : "1 artículo"} sin cerrar.</strong> ${partes.join(" ")}</span>
+        <span>${tr(total > 1 ? "sinCerrarPlural" : "sinCerrarSing", { total, partes: partes.join(" ") })}</span>
       </div>
     </div>`;
   }
@@ -313,14 +322,13 @@ export function mountAdminPanel({ store } = {}) {
     const banner = faltanteBanner();
 
     if (!state.purchases.length) {
-      return `${banner}<p class="lap__state">Todavía no hay pedidos de compra. Pedile al bot
-        ("nos faltan discos de corte") y aparece acá.</p>`;
+      return `${banner}<p class="lap__state">${tr("pedidosVacio")}</p>`;
     }
 
     const tabla = (filas, vacio) => `
       <div class="lap__tablewrap">
         <table class="lap-table">
-          <thead><tr><th>Artículo</th><th>Cantidad</th><th>Estado</th><th></th></tr></thead>
+          <thead><tr><th>${tr("thArticulo")}</th><th>${tr("thCantidad")}</th><th>${tr("estado")}</th><th></th></tr></thead>
           <tbody>
             ${
               filas.length
@@ -334,15 +342,15 @@ export function mountAdminPanel({ store } = {}) {
                 <td class="lap__rowactions">
                   ${
                     p.status === "pending"
-                      ? `<button type="button" class="lap-btn lap-btn--ghost" data-action="purchase-status" data-id="${esc(p.id)}" data-status="ordered">Marcar comprado</button>`
+                      ? `<button type="button" class="lap-btn lap-btn--ghost" data-action="purchase-status" data-id="${esc(p.id)}" data-status="ordered">${tr("marcarComprado")}</button>`
                       : ""
                   }
                   ${
                     p.status !== "received"
-                      ? `<button type="button" class="lap-btn lap-btn--ghost" data-action="purchase-status" data-id="${esc(p.id)}" data-status="received">Marcar recibido</button>`
+                      ? `<button type="button" class="lap-btn lap-btn--ghost" data-action="purchase-status" data-id="${esc(p.id)}" data-status="received">${tr("marcarRecibido")}</button>`
                       : ""
                   }
-                  <button type="button" class="lap-btn lap-btn--ghost" data-action="purchase-delete" data-id="${esc(p.id)}">Borrar</button>
+                  <button type="button" class="lap-btn lap-btn--ghost" data-action="purchase-delete" data-id="${esc(p.id)}">${tr("borrar")}</button>
                 </td>
               </tr>`
                     )
@@ -355,9 +363,9 @@ export function mountAdminPanel({ store } = {}) {
 
     return `
       ${banner}
-      <h3 class="lap__sub">Para comprar (${abiertas.length})</h3>
-      ${tabla(abiertas, "No hay nada pendiente de compra.")}
-      ${cerradas.length ? `<h3 class="lap__sub">Recibidos (${cerradas.length})</h3>${tabla(cerradas, "")}` : ""}`;
+      <h3 class="lap__sub">${tr("paraComprar", { n: abiertas.length })}</h3>
+      ${tabla(abiertas, tr("nadaPendiente"))}
+      ${cerradas.length ? `<h3 class="lap__sub">${tr("recibidos", { n: cerradas.length })}</h3>${tabla(cerradas, "")}` : ""}`;
   }
 
   // ---------- Personal ----------
@@ -379,44 +387,44 @@ export function mountAdminPanel({ store } = {}) {
               <tr>
                 <td>${esc(s.name)}</td>
                 <td class="lap-mono">${esc(fmtWhen(s.entryAt))}</td>
-                <td class="lap-mono">${abierto ? `<span class="lap-badge lap-badge--warn">adentro</span>` : esc(fmtWhen(s.exitAt))}</td>
+                <td class="lap-mono">${abierto ? `<span class="lap-badge lap-badge--warn">${tr("adentroBadge")}</span>` : esc(fmtWhen(s.exitAt))}</td>
                 <td class="lap-mono"${abierto ? ` data-live-duration="${esc(s.entryAt)}"` : ""}>${esc(fmtDuration(shiftDuration(s, ahora)))}</td>
                 <td class="lap__rowactions">
                   ${
                     abierto
                       ? `<button type="button" class="lap-btn lap-btn--ghost" data-action="shift-out" data-id="${esc(s.id)}"
-                          aria-label="Marcar la salida de ${esc(s.name)}">Marcar salida</button>`
+                          aria-label="${esc(tr("marcarSalidaAria", { name: s.name }))}">${tr("marcarSalidaFrame")}</button>`
                       : ""
                   }
                   <button type="button" class="lap-btn lap-btn--ghost" data-action="shift-delete" data-id="${esc(s.id)}"
-                    aria-label="Borrar el registro de ${esc(s.name)}">Borrar</button>
+                    aria-label="${esc(tr("borrarRegistroAria", { name: s.name }))}">${tr("borrar")}</button>
                 </td>
               </tr>`;
           })
           .join("")
-      : `<tr><td colspan="5" class="lap-dim">Todavía no hay entradas registradas.</td></tr>`;
+      : `<tr><td colspan="5" class="lap-dim">${tr("sinEntradas")}</td></tr>`;
 
     return `
       <div class="lap__toolbar">
-        <span class="lap__meta">${adentro.length} adentro ahora · ${state.shifts.length} registro${state.shifts.length === 1 ? "" : "s"}</span>
+        <span class="lap__meta">${tr("metaPersonal", { adentro: adentro.length, total: state.shifts.length })}</span>
       </div>
       <details class="lap-add" open>
-        <summary>Marcar entrada</summary>
+        <summary>${tr("marcarEntradaFrame")}</summary>
         <form data-form="shift" novalidate>
-          <label>Persona
+          <label>${tr("labelPersona")}
             <input type="text" name="name" list="lap-people" maxlength="80" required
-              placeholder="Nombre y apellido" autocomplete="off" />
+              placeholder="${tr("phNombreApellido")}" autocomplete="off" />
             <datalist id="lap-people">
               ${personas.map((p) => `<option value="${esc(p)}"></option>`).join("")}
             </datalist>
           </label>
           <p class="lap-add__error" role="alert" hidden></p>
-          <button type="submit" class="lap-btn">Marcar entrada</button>
+          <button type="submit" class="lap-btn">${tr("marcarEntradaFrame")}</button>
         </form>
       </details>
       <div class="lap__tablewrap">
         <table class="lap-table">
-          <thead><tr><th>Persona</th><th>Entrada</th><th>Salida</th><th>Duración</th><th></th></tr></thead>
+          <thead><tr><th>${tr("thPersona")}</th><th>${tr("thEntrada")}</th><th>${tr("thSalida")}</th><th>${tr("thDuracion")}</th><th></th></tr></thead>
           <tbody>${filas}</tbody>
         </table>
       </div>`;
@@ -424,11 +432,11 @@ export function mountAdminPanel({ store } = {}) {
 
   function historyView() {
     const repairs = allRepairs(state.tools);
-    if (!repairs.length) return `<p class="lap__state">Todavía no se registró ninguna reparación.</p>`;
+    if (!repairs.length) return `<p class="lap__state">${tr("sinReparaciones")}</p>`;
     return `
       <div class="lap__tablewrap">
         <table class="lap-table">
-          <thead><tr><th>Fecha</th><th>Herramienta</th><th>Motivo</th><th>Técnico</th></tr></thead>
+          <thead><tr><th>${tr("fecha")}</th><th>${tr("herramienta")}</th><th>${tr("motivo")}</th><th>${tr("thTecnico")}</th></tr></thead>
           <tbody>
             ${repairs
               .map(
@@ -454,27 +462,27 @@ export function mountAdminPanel({ store } = {}) {
           <h3 class="lap-drawer__name">${esc(tool.name)}</h3>
           <p class="lap-mono lap-dim">${esc(tool.id)} · ${badge(tool.status)}</p>
         </div>
-        <button type="button" class="lap__x" data-action="close-drawer" aria-label="Cerrar historial">✕</button>
+        <button type="button" class="lap__x" data-action="close-drawer" aria-label="Cerrar historial" data-i18n-aria="cerrarHistorialAria">✕</button>
       </header>
 
       <div class="lap-drawer__stats">
-        <div><strong class="lap-bignum">${repairs.length}</strong><span>reparaciones</span></div>
-        <div><strong>${fmtDate(lastRepairDate(tool))}</strong><span>última reparación</span></div>
+        <div><strong class="lap-bignum">${repairs.length}</strong><span>${tr("reparacionesEst")}</span></div>
+        <div><strong>${fmtDate(lastRepairDate(tool))}</strong><span>${tr("ultimaReparacion")}</span></div>
       </div>
 
       <div class="lap-drawer__stats">
-        <div><strong>${esc(fmtWhen(toolMovement(tool).outAt))}</strong><span>última salida</span></div>
-        <div><strong>${esc(fmtWhen(toolMovement(tool).inAt))}</strong><span>última entrada</span></div>
+        <div><strong>${esc(fmtWhen(toolMovement(tool).outAt))}</strong><span>${tr("ultimaSalida")}</span></div>
+        <div><strong>${esc(fmtWhen(toolMovement(tool).inAt))}</strong><span>${tr("ultimaEntrada")}</span></div>
       </div>
       <div class="lap-drawer__actions">
         ${
           toolMovement(tool).fuera
-            ? `<button type="button" class="lap-btn" data-action="tool-in" data-id="${esc(tool.id)}">Marcar entrada</button>`
-            : `<button type="button" class="lap-btn" data-action="tool-out" data-id="${esc(tool.id)}">Marcar salida</button>`
+            ? `<button type="button" class="lap-btn" data-action="tool-in" data-id="${esc(tool.id)}">${tr("marcarEntradaFrame")}</button>`
+            : `<button type="button" class="lap-btn" data-action="tool-out" data-id="${esc(tool.id)}">${tr("marcarSalidaFrame")}</button>`
         }
       </div>
 
-      <h4 class="lap-drawer__sub">Historial</h4>
+      <h4 class="lap-drawer__sub">${tr("historialTitulo")}</h4>
       ${
         repairs.length
           ? `<ol class="lap-timeline">
@@ -484,32 +492,32 @@ export function mountAdminPanel({ store } = {}) {
                 <li class="${r.id === flashId ? "is-new" : ""}">
                   <time>${fmtDate(r.date)}</time>
                   <p class="lap-reason">${esc(r.reason)}</p>
-                  ${r.technician ? `<p class="lap-dim">Técnico: ${esc(r.technician)}</p>` : ""}
+                  ${r.technician ? `<p class="lap-dim">${tr("tecnicoLabel", { technician: esc(r.technician) })}</p>` : ""}
                   ${r.notes ? `<p class="lap-notes">${esc(r.notes)}</p>` : ""}
                 </li>`
                 )
                 .join("")}
             </ol>`
-          : `<p class="lap__state">Esta herramienta no tiene reparaciones registradas.</p>`
+          : `<p class="lap__state">${tr("sinReparacionesTool")}</p>`
       }
 
       <details class="lap-form">
-        <summary>Registrar reparación</summary>
+        <summary>${tr("registrarReparacion")}</summary>
         <form data-form="repair" novalidate>
-          <label>Fecha
+          <label>${tr("fecha")}
             <input type="date" name="date" value="${todayISO()}" max="${todayISO()}" required />
           </label>
-          <label>Motivo
-            <input type="text" name="reason" maxlength="300" required placeholder="Ej: Reemplazo de carbones" />
+          <label>${tr("motivo")}
+            <input type="text" name="reason" maxlength="300" required placeholder="${tr("phMotivo")}" />
           </label>
-          <label>Técnico
-            <input type="text" name="technician" maxlength="80" placeholder="Opcional" />
+          <label>${tr("tecnico")}
+            <input type="text" name="technician" maxlength="80" placeholder="${tr("phOpcional")}" />
           </label>
-          <label>Notas
-            <textarea name="notes" rows="3" maxlength="500" placeholder="Opcional"></textarea>
+          <label>${tr("notas")}
+            <textarea name="notes" rows="3" maxlength="500" placeholder="${tr("phOpcional")}"></textarea>
           </label>
           <p class="lap-form__error" role="alert" hidden></p>
-          <button type="submit" class="lap-btn">Guardar reparación</button>
+          <button type="submit" class="lap-btn">${tr("guardarReparacion")}</button>
         </form>
       </details>`;
   }
@@ -518,12 +526,12 @@ export function mountAdminPanel({ store } = {}) {
   function render() {
     titleEl.textContent =
       state.view === "tools"
-        ? "Inventario de herramientas"
+        ? tr("tituloInventario")
         : state.view === "history"
-          ? "Historial de reparaciones"
+          ? tr("tituloReparaciones")
           : state.view === "purchases"
-            ? "Pedidos de compra"
-            : "Entradas y salidas";
+            ? tr("tituloCompras")
+            : tr("tituloPersonal");
     root.querySelectorAll("[data-view]").forEach((b) => {
       const active = b.dataset.view === state.view;
       b.classList.toggle("is-active", active);
@@ -533,18 +541,18 @@ export function mountAdminPanel({ store } = {}) {
     // El menú avisa cuánto falta cerrar en Compras sin entrar a la pestaña.
     const navCompras = root.querySelector('.lap__nav[data-view="purchases"]');
     const porCerrar = openPurchases(state.purchases).length;
-    navCompras.textContent = porCerrar ? `Compras (${porCerrar})` : "Compras";
+    navCompras.textContent = porCerrar ? `${tr("navCompras")} (${porCerrar})` : tr("navCompras");
 
     // El error no se queda como única pantalla: se muestra arriba y la vista
     // igual se dibuja debajo, así compras y personal siguen siendo usables
     // aunque el inventario no pueda cargarse.
     const bloqueError = state.error
       ? `<p class="lap__state lap__state--error" role="alert">${esc(state.error)}</p>
-         <button type="button" class="lap-btn" data-action="retry">Reintentar</button>`
+         <button type="button" class="lap-btn" data-action="retry">${tr("retry")}</button>`
       : "";
 
     if (state.loading && !state.tools.length) {
-      contentEl.innerHTML = `${bloqueError}<p class="lap__state">Cargando…</p>`;
+      contentEl.innerHTML = `${bloqueError}<p class="lap__state">${tr("cargando")}</p>`;
     } else {
       const vista =
         state.view === "tools"
@@ -575,7 +583,7 @@ export function mountAdminPanel({ store } = {}) {
     try {
       state.tools = await listTools();
     } catch (err) {
-      state.error = err.message || "No se pudo cargar el inventario.";
+      state.error = err.message || tr("errCargarInventario");
     }
 
     // Se cargan aparte del inventario: si compras o personal fallan, el panel
@@ -614,13 +622,13 @@ export function mountAdminPanel({ store } = {}) {
   }
 
   async function removeTool(toolId) {
-    if (!window.confirm(`¿Eliminar la herramienta ${toolId} y todo su historial de reparaciones?`)) return;
+    if (!window.confirm(tr("confirmEliminarTool", { id: toolId }))) return;
     try {
       await deleteTool(toolId);
       if (state.selectedId === toolId) state.selectedId = null;
       await refresh();
     } catch (err) {
-      state.error = err.message || "No se pudo eliminar la herramienta.";
+      state.error = err.message || tr("errEliminarHerramienta");
       render();
     }
   }
@@ -630,19 +638,19 @@ export function mountAdminPanel({ store } = {}) {
       await setPurchaseStatus(id, status);
       await refresh();
     } catch (err) {
-      state.error = err.message || "No se pudo cambiar el estado del pedido.";
+      state.error = err.message || tr("errCambiarEstado");
       render();
     }
   }
 
   async function removePurchase(id) {
     const pedido = state.purchases.find((p) => p.id === id);
-    if (!window.confirm(`¿Borrar el pedido de ${pedido?.name ?? "este artículo"}?`)) return;
+    if (!window.confirm(tr("confirmBorrarPedido", { name: pedido?.name ?? tr("thArticulo") }))) return;
     try {
       await deletePurchase(id);
       await refresh();
     } catch (err) {
-      state.error = err.message || "No se pudo borrar el pedido.";
+      state.error = err.message || tr("errBorrarPedido");
       render();
     }
   }
@@ -656,7 +664,7 @@ export function mountAdminPanel({ store } = {}) {
       else await markToolIn(id);
       await refresh();
     } catch (err) {
-      state.error = err.message || "No se pudo registrar el movimiento.";
+      state.error = err.message || tr("errMovimiento");
       render();
     }
   }
@@ -666,19 +674,19 @@ export function mountAdminPanel({ store } = {}) {
       await endShift(id);
       await refresh();
     } catch (err) {
-      state.error = err.message || "No se pudo marcar la salida.";
+      state.error = err.message || tr("errMarcarSalida");
       render();
     }
   }
 
   async function removeShift(id) {
     const registro = state.shifts.find((s) => s.id === id);
-    if (!window.confirm(`¿Borrar el registro de ${registro?.name ?? "esa persona"}?`)) return;
+    if (!window.confirm(tr("confirmBorrarRegistro", { name: registro?.name ?? tr("labelPersona") }))) return;
     try {
       await deleteShift(id);
       await refresh();
     } catch (err) {
-      state.error = err.message || "No se pudo borrar el registro.";
+      state.error = err.message || tr("errBorrarRegistro");
       render();
     }
   }
@@ -752,7 +760,7 @@ export function mountAdminPanel({ store } = {}) {
         break;
       case "download-excel":
         downloadExcel().catch((err) => {
-          state.error = err.message || "No se pudo descargar el Excel.";
+          state.error = err.message || tr("errExcel");
           render();
         });
         break;
@@ -790,7 +798,7 @@ export function mountAdminPanel({ store } = {}) {
         await refresh();
         root.querySelector(".lap-add").open = false;
       } catch (err) {
-        errorEl.textContent = err.message || "No se pudo guardar la herramienta.";
+        errorEl.textContent = err.message || tr("errGuardarHerramienta");
         errorEl.hidden = false;
         submitBtn.disabled = false;
       }
@@ -812,7 +820,7 @@ export function mountAdminPanel({ store } = {}) {
         // DOM: el nodo viejo quedó suelto y el foco no llegaría a ningún lado.
         root.querySelector("[data-form=shift] input[name=name]")?.focus();
       } catch (err) {
-        errorEl.textContent = err.message || "No se pudo marcar la entrada.";
+        errorEl.textContent = err.message || tr("errMarcarEntrada");
         errorEl.hidden = false;
         submitBtn.disabled = false;
         shiftForm.querySelector("input[name=name]")?.focus();
@@ -845,7 +853,7 @@ export function mountAdminPanel({ store } = {}) {
       state.flashId = (updated.repairs ?? []).find((r) => !knownIds.has(r.id))?.id ?? null;
       render();
     } catch (err) {
-      errorEl.textContent = err.message || "No se pudo guardar la reparación.";
+      errorEl.textContent = err.message || tr("errGuardarReparacion");
       errorEl.hidden = false;
       submitBtn.disabled = false;
     }
@@ -889,6 +897,14 @@ export function mountAdminPanel({ store } = {}) {
         first.focus();
       }
     }
+  });
+
+  // Cambio de idioma mientras el panel está montado: se repintan los textos
+  // estáticos ([data-i18n*] del chrome y del diálogo de acceso) y, si el panel
+  // está abierto, la vista viva vuelve a dibujarse con el nuevo idioma.
+  window.addEventListener("lotus:lang", () => {
+    if (window.LOTUS_I18N) window.LOTUS_I18N.applyToDom(document);
+    if (!root.hidden) render();
   });
 
   return { open, close, refresh };

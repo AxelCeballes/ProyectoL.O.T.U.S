@@ -296,6 +296,50 @@ Si no hay que agregar herramientas, "agregar" va en null. Si no hay que pedir co
 Si la consulta no tiene relación con L.O.T.U.S., decí amablemente en "reply" que solo podés ayudar con el sistema.
 No inventes funciones que no conozcas.`;
 
+// Variante en inglés del prompt para el botón de idioma: espeja las mismas
+// reglas que el sistema en español para que el comportamiento no cambie,
+// solo el idioma de la respuesta y de los nombres de los campos de la UI.
+const SYSTEM_PROMPT_EN = `You are the help assistant of L.O.T.U.S., the system of an industrial toolroom.
+Never say "kiosk" or any other word to name it. Always call it L.O.T.U.S., and if you need to refer to the screen where the operator is, say "the screen".
+The system has four screens: (1) waiting for the operator's NFC card, (2) operator menu to choose Checkout or Return, (3) barcode scan of a tool with the laser gun, and (4) tool status with search box and filters.
+You help the operator understand the flow, where each option is on screen and what to do if something does not respond.
+
+Always answer in clear, brief English: at most 4 or 5 sentences.
+If you need to greet, use only "Hi". Never use "Welcome" or any other gendered formula: you do not know who is on the other side. And greet only when it fits: if the question is direct, like a count or a search, answer straight away, without a "Hi" first.
+
+Inventory: you receive the current inventory, which is the real one for this screen. It is the only source of truth: count, search and compare against that list, and when they ask how many of something there are, give the exact number. If they ask for something that is not listed, say it is not there and offer to add it.
+
+If the inventory comes empty or is not passed, do not fill it from memory: say the inventory could not be read and ask to reload the screen.
+
+Tool additions: you can add tools; that is what the "agregar" field is for. When the operator asks to add one or more tools, do it. Rules:
+- Add only when explicitly asked ("add", "load", "register", "enter"). A greeting, a question or a counting query is NEVER an addition: in those cases "agregar" must be null.
+- At most 20 per message. If they ask for more, add up to 20 and say in "reply" how many were left out. If the quantity is ambiguous ("add 3 discs"), create 3 records, one per unit.
+- "status" can only be "available", "in_use" or "maintenance". If they do not say it, use "available".
+- "category" is short free text: "Electric", "Pneumatic", "Hand tools", "Measuring", "Safety" or the one that fits.
+- Do not add a tool that is already in the inventory by name.
+- If they only ask or check, "agregar" must be null.
+
+Clarification: the data lives in the browser of this demo, there is no database. That does not stop you from answering or adding: the inventory I pass you is exactly what is loaded. Do not invent movements or staff, and if they ask for data that is not on the list, say so.
+
+Purchase orders (consumable restock): there is a "comprar" field for the things that need to be bought. Use it when the operator says something consumable is missing: "we are out of cutting discs", "we need to buy gloves", "there is no paper left", "write down the purchase of a grinder". Rules:
+- A missing consumable goes in "comprar", NOT in "agregar": adding is for inventory tools.
+- Put the "quantity" they asked for or, if they did not say it, 1.
+- "category": "Consumables", "Safety", "Cleaning", "Stationery" or the one that fits.
+- If there is already an open order for the same item, do not duplicate it: it merges on its own.
+- If they only ask how much is missing or what exists, do not generate any order: "comprar" must be null.
+- The "comprar" array ONLY fills when the operator explicitly asked to restock something. A greeting, a query or a checkout/return order is not a purchase order: in those cases "comprar" must be null and you never complete an example object or put values like "string".
+
+Always answer with a single JSON object, no surrounding text and no code blocks:
+{"reply": "what you read to the operator", "agregar": [{"name": "...", "category": "...", "status": "available"}], "comprar": [{"name": "...", "category": "Consumibles", "quantity": 3, "note": ""}]}
+If there are no tools to add, "agregar" must be null. If there are no purchases to order, "comprar" must be null.
+
+If the question has nothing to do with L.O.T.U.S., kindly say in "reply" that you can only help with the system.
+Do not invent features you do not know.`;
+
+const msg = (lang, es, en) => (lang === "en" ? en : es);
+
+const systemPromptFor = (lang) => (lang === "en" ? SYSTEM_PROMPT_EN : SYSTEM_PROMPT);
+
 // ------------------------------------------------------------------
 // Validación del historial. Además de filtrar, garantiza que la primera
 // mensaje sea del usuario: las dos APIs rechazan con 400 un historial que
@@ -499,27 +543,35 @@ function isKeyProblem(raw) {
 }
 
 module.exports = async function handler(req, res) {
+  const idioma = (req.body && typeof req.body === "object" && req.body.lang) === "en" ? "en" : "es";
+
   if (req.method !== "POST") {
-    return sendJson(res, 405, { error: "Método no permitido" }, { Allow: "POST" });
+    return sendJson(res, 405, { error: msg(idioma, "Método no permitido", "Method not allowed") }, { Allow: "POST" });
   }
 
   const target = resolveProvider();
 
   if (target.name !== "gemini" && target.name !== "anthropic") {
     console.error(`[chat] CHAT_PROVIDER="${target.name}" no es un proveedor conocido.`);
-    return sendJson(res, 500, { error: "El asistente no está configurado correctamente." });
+    return sendJson(res, 500, {
+      error: msg(idioma, "El asistente no está configurado correctamente.", "The assistant is not configured properly."),
+    });
   }
 
   if (!target.apiKey) {
     console.error(`[chat] ${target.keyName} no está definida en el entorno del servidor.`);
     return sendJson(res, 503, {
-      error: `El asistente no está configurado. Revisá ${target.keyName} en Vercel.`,
+      error: msg(
+        idioma,
+        `El asistente no está configurado. Revisá ${target.keyName} en Vercel.`,
+        `The assistant is not configured. Check ${target.keyName} in Vercel.`
+      ),
     });
   }
 
   const { message, history, context, inventario } = req.body ?? {};
   if (typeof message !== "string" || !message.trim()) {
-    return sendJson(res, 400, { error: "Escribí una consulta antes de enviarla." });
+    return sendJson(res, 400, { error: msg(idioma, "Escribí una consulta antes de enviarla.", "Type a question before sending it.") });
   }
 
   const limit = checkRateLimit(clientIp(req));
@@ -527,7 +579,7 @@ module.exports = async function handler(req, res) {
     return sendJson(
       res,
       429,
-      { error: "Demasiadas consultas seguidas. Esperá un momento e intentá de nuevo." },
+      { error: msg(idioma, "Demasiadas consultas seguidas. Esperá un momento e intentá de nuevo.", "Too many consecutive questions. Wait a moment and try again.") },
       { "Retry-After": String(limit.retryAfter) }
     );
   }
@@ -535,7 +587,7 @@ module.exports = async function handler(req, res) {
   const screenContext = cleanContext(context);
   const inventoryContext = cleanInventory(inventario);
   const systemText = [
-    SYSTEM_PROMPT,
+    systemPromptFor(idioma),
     screenContext ? `Contexto de L.O.T.U.S. ahora mismo:\n${screenContext}` : "",
     inventoryContext,
   ]
@@ -578,18 +630,18 @@ module.exports = async function handler(req, res) {
       console.error(`[chat] ${target.name} respondió ${response.status}: ${raw}`);
 
       if (response.status === 429) {
-        return sendJson(res, 429, { error: "El asistente está ocupado. Probá de nuevo en un momento." });
+        return sendJson(res, 429, { error: msg(idioma, "El asistente está ocupado. Probá de nuevo en un momento.", "The assistant is busy. Try again in a moment.") });
       }
       // Credencial rechazada = configuración, no una caída transitoria. Google
       // responde 400 y no 401 cuando la clave no existe (medido: API_KEY_INVALID),
       // así que un 400 también puede ser una clave mala y no un body inválido.
       if (response.status === 401 || response.status === 403 || (response.status === 400 && isKeyProblem(raw))) {
-        return sendJson(res, 503, { error: "El asistente no está configurado. Revisá las credenciales en Vercel." });
+        return sendJson(res, 503, { error: msg(idioma, "El asistente no está configurado. Revisá las credenciales en Vercel.", "The assistant is not configured. Check the credentials in Vercel.") });
       }
       if (response.status >= 500) {
-        return sendJson(res, 502, { error: "El asistente no está disponible. Probá de nuevo." });
+        return sendJson(res, 502, { error: msg(idioma, "El asistente no está disponible. Probá de nuevo.", "The assistant is unavailable. Try again.") });
       }
-      return sendJson(res, 502, { error: "No se pudo obtener una respuesta del asistente." });
+      return sendJson(res, 502, { error: msg(idioma, "No se pudo obtener una respuesta del asistente.", "Could not get an answer from the assistant.") });
     }
 
     const data = await response.json();
@@ -600,14 +652,14 @@ module.exports = async function handler(req, res) {
         `[chat] ${target.name} no devolvió texto. finishReason=${finishReason} ` +
           `model=${request.model} usage=${JSON.stringify(data.usageMetadata ?? data.usage ?? {})}`
       );
-      return sendJson(res, 502, { error: "El asistente no devolvió una respuesta. Probá de nuevo." });
+      return sendJson(res, 502, { error: msg(idioma, "El asistente no devolvió una respuesta. Probá de nuevo.", "The assistant did not return an answer. Try again.") });
     }
 
     // Se le pidió JSON. Si no viene, se muestra el texto crudo como respuesta: es
     // preferible una respuesta sin altas a dejar al operario sin nada.
     const parsed = parseReply(rawText, inventario);
     if (!parsed.reply.trim()) {
-      return sendJson(res, 502, { error: "El asistente no devolvió una respuesta. Probá de nuevo." });
+      return sendJson(res, 502, { error: msg(idioma, "El asistente no devolvió una respuesta. Probá de nuevo.", "The assistant did not return an answer. Try again.") });
     }
 
     return sendJson(res, 200, { reply: parsed.reply, agregar: parsed.agregar, comprar: parsed.comprar });
@@ -619,8 +671,8 @@ module.exports = async function handler(req, res) {
       502,
       {
         error: timedOut
-          ? "El asistente tardó demasiado. Probá de nuevo."
-          : "No se pudo conectar con el asistente. Probá de nuevo.",
+          ? msg(idioma, "El asistente tardó demasiado. Probá de nuevo.", "The assistant took too long. Try again.")
+          : msg(idioma, "No se pudo conectar con el asistente. Probá de nuevo.", "Could not connect to the assistant. Try again."),
       }
     );
   }
@@ -628,4 +680,5 @@ module.exports = async function handler(req, res) {
 
 // Se exporta para que los tests puedan verificar el prompt sin pegarle a la API.
 module.exports.SYSTEM_PROMPT = SYSTEM_PROMPT;
+module.exports.systemPromptFor = systemPromptFor;
 module.exports.sanitizePurchases = sanitizePurchases;
