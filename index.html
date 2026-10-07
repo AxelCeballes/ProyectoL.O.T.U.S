@@ -639,12 +639,22 @@
   <!-- ========================================== -->
   <!-- PIE DE PÁGINA (Footer Institucional)       -->
   <!-- ========================================== -->
-  <footer class="w-full bg-white border-t border-slate-200/80 py-3 px-8 text-center text-xs text-slate-400 flex flex-col sm:flex-row items-center justify-between gap-2 flex-shrink-0">
+  <footer class="w-full bg-white border-t border-slate-200/80 py-3 px-8 text-center text-xs text-slate-400 flex flex-col lg:grid lg:grid-cols-[1fr_auto_1fr] items-center justify-between gap-2 flex-shrink-0">
     <div class="flex items-center gap-2">
       <span class="font-display font-semibold text-brand-navy">L.O.T.U.S. SOLUTIONS</span>
       <span>&copy; 2026 Todos los derechos reservados</span>
     </div>
-    <div class="flex items-center gap-4 text-[11px] text-slate-400">
+    <a href="https://www.instagram.com/l.o.t.u.s_solutions/" target="_blank" rel="noopener noreferrer"
+       class="inline-flex items-center gap-1.5 text-brand-navy hover:text-emerald-600 transition-colors no-underline lg:col-start-2 lg:row-start-1"
+       aria-label="Seguinos en Instagram">
+      <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+        <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
+        <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
+      </svg>
+      <span>@l.o.t.u.s_solutions</span>
+    </a>
+    <div class="flex flex-wrap items-center justify-center gap-4 text-[11px] text-slate-400 lg:col-start-3 lg:row-start-1 lg:justify-self-end">
       <span>Sistema Pañol v2.4</span>
       <span>·</span>
       <span>ISO 9001 Compliance</span>
@@ -652,17 +662,6 @@
       <span class="flex items-center gap-1">
         <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Servidor Conectado
       </span>
-      <span>·</span>
-      <a href="https://www.instagram.com/l.o.t.u.s_solutions/" target="_blank" rel="noopener noreferrer"
-         class="inline-flex items-center gap-1.5 text-brand-navy hover:text-emerald-600 transition-colors no-underline"
-         aria-label="Seguinos en Instagram">
-        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
-          <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
-          <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
-        </svg>
-        <span>@l.o.t.u.s_solutions</span>
-      </a>
     </div>
   </footer>
 
