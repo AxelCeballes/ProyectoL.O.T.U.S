@@ -15,6 +15,7 @@ import { join, dirname, extname, relative, resolve, isAbsolute, sep } from 'node
 import { fileURLToPath } from 'node:url';
 import { timingSafeEqual, randomUUID } from 'node:crypto';
 import { createFalmetWorkbook } from './excel-export.mjs';
+import { semillaConsumibles } from '../seed-consumibles.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const PORT = Number(process.env.PORT) || 3000;
@@ -42,7 +43,12 @@ async function readPurchases() {
   } catch (error) {
     if (error.code !== 'ENOENT') throw error;
   }
-  return [];
+  // Primera vez: se siembran consumibles tipicos del taller (igual que el
+  // inventario). Se escriben una sola vez para que no cambien en cada lectura
+  // y para que lo que marca el usuario (recibido, borrado) quede guardado.
+  const semilla = semillaConsumibles();
+  await writePurchases(semilla);
+  return semilla;
 }
 
 async function writePurchases(purchases) {

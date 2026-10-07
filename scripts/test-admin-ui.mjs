@@ -228,7 +228,8 @@ try {
   check('el panel abre sin error', !cabecera.error, cabecera.error);
   check('carga el inventario desde el servidor', cabecera.filas > 0, `${cabecera.filas} filas`);
   check('las cuatro pestañas están',
-    ['Herramientas', 'Reparaciones', 'Compras', 'Personal'].every((n) => cabecera.navs.includes(n)),
+    ['Herramientas', 'Reparaciones', 'Personal'].every((n) => cabecera.navs.includes(n)) &&
+      cabecera.navs.some((n) => n.startsWith('Compras')),
     JSON.stringify(cabecera.navs));
 
   // ---------- Personal: entrada ----------

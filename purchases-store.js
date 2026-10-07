@@ -10,6 +10,7 @@
 // inventario no está: el site tiene que poder anotar un pedido aunque el
 // backend todavía no exista.
 import { adminToken } from "./repairs-store.js";
+import { semillaConsumibles } from "./seed-consumibles.js";
 
 const LS_KEY = "lotus.purchases.v1";
 const MAX_NAME = 120;
@@ -78,7 +79,14 @@ function readLocal() {
   } catch {
     /* si está corrupto, se empieza de cero */
   }
-  return [];
+  // Primera vez que se abre Compras sin nada guardado: se siembran consumibles
+  // típicos del taller (tarugos, tornillos, discos de corte) con cantidades
+  // al azar y algunos faltantes, así la pestaña no arranca en blanco y se
+  // entiende qué es "para comprar". Una vez escrito (aunque quede como []),
+  // no vuelve a sembrar: la decisión de borrarlos es del usuario.
+  const semilla = semillaConsumibles();
+  writeLocal(semilla);
+  return semilla;
 }
 
 function writeLocal(purchases) {

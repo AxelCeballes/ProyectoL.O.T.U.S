@@ -37,6 +37,19 @@ const {
 
 configurePurchases({ mode: 'local' });
 
+section('compras: la semilla de consumos');
+
+storage.delete('lotus.purchases.v1');
+const sembrada = await listPurchases();
+check('siembra consumibles tipicos', sembrada.length >= 8, String(sembrada.length));
+check('tarugos entre lo sembrado', sembrada.some((p) => /tarugos/i.test(p.name)));
+check('faltan discos en la semilla', sembrada.some((p) => /disc/i.test(p.name) && p.status === 'pending'));
+check('hay recibidos en la semilla', sembrada.some((p) => p.status === 'received'));
+
+// El resto del test se corre contra una lista vacía a propósito: la semilla
+// ya tiene su cobertura arriba, y las cuentas que siguen son exactas.
+storage.set('lotus.purchases.v1', '[]');
+
 section('compras: validacion');
 
 await revienta(() => addPurchase({ name: '   ' }), 'rechaza un pedido sin nombre');
